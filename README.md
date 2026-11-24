@@ -50,3 +50,6 @@ tests/            node tests
 ```
 
 See [AGENTS.md](AGENTS.md) for the architecture, the hole format and how to add a hole.
+
+## License
+Code is MIT licensed, see [LICENSE](LICENSE). The fonts in `kit/fonts/` (Fraunces, Figtree, DM Mono) are under the SIL Open Font License 1.1. The Oddvale name and mark are not covered by the MIT license.
