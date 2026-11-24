@@ -1,0 +1,18 @@
+{
+  "slug": "wonky-putt",
+  "title": "Wonky Putt",
+  "tagline": "The robots built a golf course. Nothing on it is straight.",
+  "description": "Mini golf on a course the odd little robots of Oddvale built themselves. Pull back, let go, and bank your orange ball around 18 wonky holes of windmills, pipes, bumpers, boosters and thin ice. Beat par for stars, hunt holes-in-one, and unlock new balls.",
+  "genre": "Mini golf",
+  "verb": "Putt",
+  "tone": "mint",
+  "players": "1 player",
+  "session": "10–15 min rounds",
+  "controls": ["Keyboard", "Mouse", "Touch"],
+  "version": "1.0.0",
+  "released": "2026-11-24",
+  "updated": "2026-11-24",
+  "repo": "https://github.com/JohnGarrisonDev/wonky-putt",
+  "cover": "cover.webp",
+  "coverAlt": "Illustration: an odd little robot with mismatched eyes holds a putter and watches its orange ball roll along a wonky mint-green mini-golf course, past a crooked windmill and a loop."
+}

@@ -1,0 +1,10 @@
+{
+  "name": "wonky-putt",
+  "private": true,
+  "type": "module",
+  "description": "Wonky Putt, an Oddvale game. No dependencies, no build step: this file only marks the code as ES modules and names the test script.",
+  "scripts": {
+    "test": "node --test tests/",
+    "solve": "node tools/solve.mjs"
+  }
+}

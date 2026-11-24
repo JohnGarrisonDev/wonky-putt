@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- Wonky Putt, an Oddvale game. Rules: relative URLs only (served from games.oddvale.com/wonky-putt/), no external requests, no build step. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Wonky Putt — Oddvale Games</title>
+  <meta name="description" content="Mini golf on a course built by odd little robots, where nothing is straight. Pull back, let go, and bank your way around 18 wonky holes of windmills, pipes, bumpers and thin ice." />
+  <link rel="canonical" href="https://games.oddvale.com/wonky-putt/" />
+  <meta name="theme-color" content="#17131f" />
+  <link rel="icon" href="kit/favicon.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Oddvale Games" />
+  <meta property="og:title" content="Wonky Putt — Oddvale Games" />
+  <meta property="og:description" content="Mini golf on a course built by odd little robots, where nothing is straight. 18 wonky holes of windmills, pipes, bumpers and thin ice." />
+  <meta property="og:url" content="https://games.oddvale.com/wonky-putt/" />
+  <meta property="og:image" content="https://games.oddvale.com/wonky-putt/cover.webp" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preload" href="kit/fonts/fraunces-latin-full-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="kit/shell.css" />
+  <link rel="stylesheet" href="src/game.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="logo" href="../" title="All Oddvale games">
+        <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><circle cx="21" cy="22" r="13" fill="var(--orange)"/><circle cx="24.5" cy="24.5" r="5.2" fill="var(--ink)"/><circle cx="47" cy="19" r="5.5" fill="var(--ink)"/><path d="M9 41 32 57 55 41" fill="none" stroke="var(--ink)" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="word">oddvale <i>games</i></span>
+      </a>
+      <span class="crumb">Wonky Putt</span>
+      <span class="spacer"></span>
+      <button class="chip icon" type="button" data-mute aria-label="Toggle sound"></button>
+      <button class="chip icon" type="button" data-fullscreen aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <a class="chip" href="https://github.com/JohnGarrisonDev/wonky-putt" target="_blank" rel="noopener" title="Source code on GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.13v3.16c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+        <span class="label">GitHub</span>
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div class="game-head">
+        <div>
+          <span class="eyebrow">Mini golf</span>
+          <h1>Wonky <em>Putt</em></h1>
+          <p>The robots built a golf course. Nothing on it is straight.</p>
+        </div>
+      </div>
+      <!-- All game UI (menus, HUD, scorecards) lives inside the stage so it works in full screen. -->
+      <div class="stage" id="stage">
+        <canvas id="game" aria-label="Wonky Putt game"></canvas>
+      </div>
+      <section class="info">
+        <div class="card tilt-l"><h2>How to play</h2><ul>
+          <li>Get the ball in the cup in as few putts as you can. There are 18 holes, a front nine and a back nine.</li>
+          <li>Slow balls drop in. Fast balls hop over the cup, so ease off near the flag.</li>
+          <li>Sand eats speed, ice keeps it, water costs a stroke. Arrows push, boosters fling, bumpers boing, pipes swap places.</li>
+          <li>Under par earns three stars, par two, finishing one. Stars unlock new balls.</li>
+          <li>A hole ends at par plus five. The robots move you on, no hard feelings.</li>
+        </ul></div>
+        <div class="card yellow"><h2>Controls</h2><ul>
+          <li><b>Mouse or touch:</b> press anywhere on the course, pull back like a slingshot, let go. Longer pull, harder putt.</li>
+          <li><b>Keyboard:</b> <kbd>←</kbd> <kbd>→</kbd> aim, <kbd>↑</kbd> <kbd>↓</kbd> power, <kbd>Space</kbd> or <kbd>Enter</kbd> to putt. Hold <kbd>Shift</kbd> for fine aim.</li>
+          <li><kbd>R</kbd> restarts the hole (a mulligan in a full round). <kbd>Esc</kbd> opens the menu or cancels an aim.</li>
+          <li>The dotted line shows where the ball goes up to its first bounce.</li>
+        </ul></div>
+        <div class="card tilt-r"><h2>Made by AI, in the open</h2><p>This game was designed and coded by AI models, and AI models keep updating it. The whole thing is on <a href="https://github.com/JohnGarrisonDev/wonky-putt">GitHub</a>: read the code, see what changed, or suggest what comes next.</p></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <span>Wonky Putt v1.0.0 · An <a href="https://oddvale.com">Oddvale</a> game. Your progress is saved in this browser only.</span>
+      <span><a href="../">More games</a> · <a href="https://github.com/JohnGarrisonDev/wonky-putt">Source</a></span>
+    </div>
+  </footer>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
