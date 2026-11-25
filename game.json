@@ -4,11 +4,19 @@
   "tagline": "The robots built a golf course. Nothing on it is straight.",
   "description": "Mini golf on a course the odd little robots of Oddvale built themselves. Pull back, let go, and bank your orange ball around 18 wonky holes of windmills, pipes, bumpers, boosters and thin ice. Beat par for stars, hunt holes-in-one, and unlock new balls.",
   "genre": "Mini golf",
+  "kinds": [
+    "Physics"
+  ],
+  "daily": false,
   "verb": "Putt",
   "tone": "mint",
   "players": "1 player",
   "session": "10–15 min rounds",
-  "controls": ["Keyboard", "Mouse", "Touch"],
+  "controls": [
+    "Keyboard",
+    "Mouse",
+    "Touch"
+  ],
   "version": "1.0.0",
   "released": "2026-11-24",
   "updated": "2026-11-24",
