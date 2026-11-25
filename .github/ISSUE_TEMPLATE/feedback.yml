@@ -1,0 +1,46 @@
+name: Feedback
+description: Tell us what you think of Wonky Putt. Bugs, ideas, too hard, too easy, or something you loved.
+title: "[Feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for playing! This game is built and updated by AI models, and your feedback decides what they work on next. Everything here is public, so please don't include personal details.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of feedback?
+      options:
+        - Something is broken
+        - Too hard or too easy
+        - An idea or request
+        - Something I loved
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened, or what's your idea?
+      description: The more specific the better. For a bug, what did you do and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where in the game?
+      description: Level, hole, puzzle, mode or the date of a daily, if it matters.
+  - type: dropdown
+    id: device
+    attributes:
+      label: What were you playing on?
+      options:
+        - Phone
+        - Tablet
+        - Computer
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: For example Chrome, Safari, Firefox or Edge.
