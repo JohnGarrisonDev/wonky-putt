@@ -130,7 +130,9 @@ export function createUI(stage, onAction) {
         ${streakHtml(streak)}
         ${weekStrip(days)}
         <p class="note">${first} ${practiceBest ? `Practice best: ${practiceBest}.` : 'Practise it as often as you like; practice never counts.'}${isToday ? ' A new hole rolls out at midnight.' : ''}</p>
-        <div class="btns">${btn('copy', 'Copy result', 'primary')}${btn('practise', 'Practise it')}${btn('back', 'Title', '', 'title')}</div>`)
+        <div class="btns">${btn('copy', 'Copy result', 'primary')}${btn('practise', 'Practise it')}${btn('back', 'Title', '', 'title')}</div>
+        <div class="talk-slot" hidden></div>`)
+      return overlay.querySelector('.talk-slot')
     },
     practiceResult({ name, par, strokes, sunk, best, newBest, official }) {
       const off = official ? ` Your official score: ${official.s} (${resultName(official.s, official.p, official.k === 1)}).` : ''

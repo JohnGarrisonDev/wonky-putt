@@ -18,6 +18,7 @@ Top-down 2D mini golf. 18 holes of data plus a generated daily hole on a fixed 9
 | `src/ui.js` | DOM overlays inside `.stage`: HUD, hint toast, title, pause menu, result card, final scorecard, hole select, balls. Buttons carry `data-act`; `main.js` `onAction` handles them. |
 | `src/save.js` | Scoring rules (stars, result names, medals, stroke limit), ball skins, and the save-data wrapper with repair of bad data. |
 | `src/audio.js` | Sound effects built from the kit's `sfx` synth. |
+| `kit/talk.js` | The hub's anonymous player-input widgets (copy, do not edit). `main.js` calls `tellUs` once for the `#tell-us` card and `dailyTalk` on the daily card (`ui.dailyCard` returns its `.talk-slot`) for today's official result only, with `score` = official strokes (the stroke limit when not holed; lower is better, API board `hole`, range 1..12). Hidden when the API is unreachable. |
 | `tools/` | `solver.js` (solver, ace scan, hole validator), `solve.mjs` (course report), `acemap.mjs`, `probe.mjs`, `humanlike.mjs`, `autoplay.js` (browser autoplayer), `daily-check.js` (daily fairness checks), `make-dailies.mjs` (writes the daily table and proofs), `daily-proofs.json` (per-day proof data), `daily-stats.mjs`. |
 | `tests/` | `node --test tests/`. `tests/index.js` only exists so that command works on every Node version. |
 

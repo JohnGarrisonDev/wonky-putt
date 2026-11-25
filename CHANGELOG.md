@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 (2026-11-25)
+Tell us what you think.
+- After today's official try, tell us how hard the daily hole was with one tap, and see how your strokes compare with everyone else's today. Anonymous: nothing about you is stored.
+- A new **Tell us** card under the game: a thumbs up or down and a few one-tap notes (too hard, too easy, broke on my phone...). No account, no typing.
+- A Privacy link in the footer explains exactly what is counted.
+
 ## 1.1.0 (2026-11-25)
 A new hole every day.
 - **Daily hole**: one generated hole per day, the same for everyone, with a silly name to match. The robots build it from the parts you know (sand, water, ice, slopes, bumpers, windmills, pipes, boosters, sliding blocks and wonky walls), one to three at a time.

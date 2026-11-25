@@ -1,5 +1,6 @@
 // Wonky Putt entry point: wires physics, renderer, input, UI, audio and save data together and owns the game flow.
 import { C, makeStore, wireChrome } from '../kit/kit.js'
+import { dailyTalk, tellUs } from '../kit/talk.js'
 import { HOLES } from './holes.js'
 import { DT, compileHole, createWorld, shoot, step, previewPath } from './physics.js'
 import { createRenderer } from './render.js'
@@ -7,7 +8,7 @@ import { createInput } from './input.js'
 import { createUI } from './ui.js'
 import { audio } from './audio.js'
 import { makeSave, defaults, strokeLimit, starsFor, resultName, resultQuip, roundMedal, fmtDiff } from './save.js'
-import { dailyHole, dateKey, isDateKey, streakInfo, recentDays, shareText, shortDate, weekday, WEEKDAYS, DAY_PLAN } from './daily.js'
+import { dailyHole, dateKey, daysBetween, isDateKey, streakInfo, recentDays, shareText, shortDate, weekday, WEEKDAYS, DAY_PLAN } from './daily.js'
 
 const stage = document.getElementById('stage'), canvas = document.getElementById('game')
 const save = makeSave(makeStore('wonky-putt', defaults()), HOLES)
@@ -124,7 +125,11 @@ function showDailyCard(key, fresh) {
   const pr = dl.practice && dl.practice.date === key ? dl.practice.best : 0
   if (G.mode === 'play' && !fresh) showAttract()
   ui.hud({ show: false })
-  ui.dailyCard({ date: key, name: dailyFor(key).name, rec, streak: { current: st.current, best: Math.max(st.best, dl.bestStreak) }, days: recentDays(dl.history, today(), 7), fresh, practiceBest: pr, isToday: key === today() })
+  const slot = ui.dailyCard({ date: key, name: dailyFor(key).name, rec, streak: { current: st.current, best: Math.max(st.best, dl.bestStreak) }, days: recentDays(dl.history, today(), 7), fresh, practiceBest: pr, isToday: key === today() })
+  // Anonymous difficulty vote and "you beat N%": today's official result only (or yesterday's, right after finishing it).
+  // Score is the official strokes (the stroke limit when not holed); fewer is better. Fills in after; hidden if the API is off.
+  const age = daysBetween(key, today())
+  if (age === 0 || (age === 1 && fresh)) dailyTalk(slot, { game: 'wonky-putt', key, score: rec.s, compact: true })
 }
 /** Write the official result (once). Called the moment the ball drops, so a reload during the celebration loses nothing. */
 function recordOfficial(sunk) {
@@ -365,6 +370,7 @@ window.addEventListener('blur', () => input.clearKeys())
 
 // ---------- boot
 wireChrome({ stage })
+tellUs(document.getElementById('tell-us'), { game: 'wonky-putt', issueUrl: 'https://github.com/JohnGarrisonDev/wonky-putt/issues/new?template=feedback.yml' })
 new ResizeObserver(() => R.resize()).observe(stage)
 R.resize()
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => R.invalidate())

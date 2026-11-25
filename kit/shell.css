@@ -98,3 +98,32 @@ kbd { display: inline-block; min-width: 1.7em; text-align: center; padding: 1px 
 .footer { padding-block: 30px; border-top: 2px solid var(--edge); background: var(--bg-band); color: var(--muted); font-size: 14.5px; }
 .footer .wrap { display: flex; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
 .footer a { color: var(--ink); font-weight: 650; }
+
+/* ---- talk.js widgets: anonymous votes, "you beat N%", Tell us, polls. Colours follow the surrounding card (light or dark). */
+.talk[hidden] { display: none !important; }
+.talk { display: grid; gap: 8px; font-family: var(--font-body); color: inherit; text-align: left; }
+.talk p { margin: 0; color: inherit; }
+.talk-daily { margin-top: 12px; padding-top: 12px; border-top: 2px dashed color-mix(in srgb, currentColor 30%, transparent); }
+.talk-daily .talk-q { font-weight: 700; font-size: 15px; }
+.talk-beat { font-size: 16px; } .talk-beat b, .talk-after b { font-weight: 800; }
+.talk-after { font-size: 14.5px; min-height: 1.3em; opacity: .9; }
+.talk-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.talk-choice { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 2px solid currentColor; background: transparent; color: inherit; font: 650 14.5px/1.1 var(--font-body); cursor: pointer; }
+.talk-choice svg { width: 18px; height: 18px; flex: none; }
+.talk-choice:hover:not(:disabled) { background: color-mix(in srgb, currentColor 12%, transparent); }
+.talk-choice[aria-pressed="true"] { background: var(--yellow); color: var(--night); border-color: var(--night); }
+.talk-choice[aria-pressed="true"]::before { content: "✓"; font-weight: 800; }
+.talk-choice:disabled:not([aria-pressed="true"]) { opacity: .5; cursor: default; }
+.talk-daily.compact .talk-choice { min-height: 36px; padding: 6px 11px; font-size: 13.5px; }
+.talk-tell { grid-column: 1 / -1; }
+.talk-tell .talk-sub { font-size: 14.5px; }
+.talk-tell .talk-sub a { color: inherit; font-weight: 650; }
+.talk-poll { background: var(--surface); color: var(--ink); border: 2px solid var(--edge); border-radius: var(--radius); padding: 20px; box-shadow: var(--hard); gap: 12px; }
+.talk-poll h3 { font: 700 22px/1.15 var(--font-display); margin: 0; }
+.talk-poll-list { display: grid; gap: 8px; }
+.talk-poll-choice { --share: 0%; position: relative; display: flex; justify-content: space-between; gap: 12px; align-items: center; width: 100%; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--edge); color: var(--ink); font: 600 15.5px/1.25 var(--font-body); text-align: left; cursor: pointer; background: linear-gradient(90deg, color-mix(in srgb, var(--mint) 55%, transparent) var(--share), var(--surface) var(--share)); }
+.talk-poll-choice:hover:not(:disabled) { background: var(--yellow); color: var(--night); }
+.talk-poll-choice:disabled { cursor: default; }
+.talk-poll-choice[aria-pressed="true"] .lbl::after { content: " (your vote)"; font-weight: 800; }
+.talk-poll-choice .num { font: 500 15px/1 var(--font-mono); }
+@media (prefers-reduced-motion: no-preference) { .talk:not([hidden]) { animation: talk-in .25s ease-out; } @keyframes talk-in { from { opacity: 0; transform: translateY(4px); } } }
