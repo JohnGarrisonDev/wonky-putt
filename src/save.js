@@ -52,7 +52,29 @@ export const SKINS = [
   { id: 'paper', name: 'Fresh Paper', need: 48, fill: '#FBF6EC', ink: '#17131F', eye: '#FF5B2E', trail: '#FBF6EC', shine: true },
 ]
 
-const DEFAULTS = { v: 1, best: {}, unlocked: 0, aces: 0, aceHoles: {}, round: null, bestRound: null, rounds: 0, skin: 'orange' }
+// v2 (1.1.0) added `daily`. Older saves simply get an empty daily block.
+const DAILY_DEFAULTS = { history: {}, cur: null, bestStreak: 0, practice: null }
+const DEFAULTS = { v: 2, best: {}, unlocked: 0, aces: 0, aceHoles: {}, round: null, bestRound: null, rounds: 0, skin: 'orange', daily: DAILY_DEFAULTS }
+const isKey = (k) => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(k)
+const posInt = (n) => Number.isInteger(n) && n > 0
+
+/** Repair the daily block in place: history entries { s: strokes, p: par, k: 1 holed / 0 not },
+ *  cur = the official attempt in progress { date, strokes, x, y }, practice = { date, best }. */
+export function repairDaily(d) {
+  let dl = d.daily
+  if (!dl || typeof dl !== 'object' || Array.isArray(dl)) dl = d.daily = JSON.parse(JSON.stringify(DAILY_DEFAULTS))
+  const hist = dl.history && typeof dl.history === 'object' && !Array.isArray(dl.history) ? dl.history : {}
+  dl.history = {}
+  for (const [k, r] of Object.entries(hist)) {
+    if (isKey(k) && r && posInt(r.s) && posInt(r.p) && r.s <= 20 && r.p <= 5) dl.history[k] = { s: r.s, p: r.p, k: r.k === 1 ? 1 : 0 }
+  }
+  const c = dl.cur
+  dl.cur = c && isKey(c.date) && Number.isInteger(c.strokes) && c.strokes >= 0 && c.strokes <= 20 && Number.isFinite(c.x) && Number.isFinite(c.y) && !dl.history[c.date] ? { date: c.date, strokes: c.strokes, x: c.x, y: c.y } : null
+  dl.bestStreak = Number.isInteger(dl.bestStreak) && dl.bestStreak > 0 ? dl.bestStreak : 0
+  const pr = dl.practice
+  dl.practice = pr && isKey(pr.date) && posInt(pr.best) ? { date: pr.date, best: pr.best } : null
+  return dl
+}
 
 /** Wrap a kit store with game-specific helpers. `store` comes from makeStore('wonky-putt', defaults()). */
 export const defaults = () => JSON.parse(JSON.stringify(DEFAULTS))
@@ -66,6 +88,8 @@ export function makeSave(store, holes) {
   if (!Number.isFinite(d.aces)) d.aces = 0
   if (d.round && !(Array.isArray(d.round.scores) && Number.isFinite(d.round.i) && d.round.i >= 0 && d.round.i < holes.length && d.round.scores.length === d.round.i)) d.round = null
   if (!SKINS.some((s) => s.id === d.skin)) d.skin = 'orange'
+  repairDaily(d)
+  d.v = 2
   const api = {
     data: d,
     save: () => store.save(),
@@ -92,6 +116,17 @@ export function makeSave(store, holes) {
       if (isBest) d.bestRound = total
       store.save()
       return isBest
+    },
+    /** Record the official daily attempt. Returns the stored entry. */
+    recordDaily(key, strokes, par, sunk) {
+      const rec = { s: strokes, p: par, k: sunk ? 1 : 0 }
+      d.daily.history[key] = rec
+      if (d.daily.cur && d.daily.cur.date === key) d.daily.cur = null
+      // keep the history small: the last 400 days are plenty for streaks and the strip
+      const keys = Object.keys(d.daily.history).sort()
+      for (let i = 0; i < keys.length - 400; i++) delete d.daily.history[keys[i]]
+      store.save()
+      return rec
     },
   }
   return api

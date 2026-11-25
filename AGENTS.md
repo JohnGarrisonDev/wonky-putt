@@ -3,20 +3,22 @@
 Read the hub's `GAME_GUIDE.md` first (no build step, no dependencies, relative URLs, localStorage only, strict CSP, phone and desktop). This file covers this game.
 
 ## What it is
-Top-down 2D mini golf. 18 holes of data on a fixed 960 x 600 logical field, a deterministic physics module shared by the game and the tests, canvas rendering in the flat Oddvale print style, DOM overlays for the UI.
+Top-down 2D mini golf. 18 holes of data plus a generated daily hole on a fixed 960 x 600 logical field, a deterministic physics module shared by the game and the tests, canvas rendering in the flat Oddvale print style, DOM overlays for the UI.
 
 ## Architecture
 | File | Job |
 | --- | --- |
 | `src/physics.js` | The simulation. No DOM. `compileHole(hole)` turns hole data into segments, zones and object lists; `createWorld` / `cloneWorld` / `shoot` / `step` / `settle` run it; `previewPath` gives the dotted aim line. Fixed step `DT = 1/120`. |
 | `src/holes.js` | `HOLES`, the course. Plain data. |
+| `src/daily.js` | The daily hole: date helpers, `dailyCandidate(date, attempt)` (the generator), `dailyHole(date)`, streaks, the share line. No DOM. |
+| `src/daily-table.js` | Generated. For each date from `DAILY_START`: which candidate is published and its par. |
 | `src/main.js` | Owns the flow (title, round, practice, result card, scorecard), the frame loop, turning physics events into sound and particles, the keyboard, and the `?debug` hook. |
 | `src/render.js` | Everything drawn on the canvas, the particle pool, and the view transform (landscape, or rotated 90 degrees on tall stages). |
 | `src/input.js` | Slingshot pointer aim and keyboard aim. Produces `{ active, angle, power }`; `main.js` decides what a putt does. |
 | `src/ui.js` | DOM overlays inside `.stage`: HUD, hint toast, title, pause menu, result card, final scorecard, hole select, balls. Buttons carry `data-act`; `main.js` `onAction` handles them. |
 | `src/save.js` | Scoring rules (stars, result names, medals, stroke limit), ball skins, and the save-data wrapper with repair of bad data. |
 | `src/audio.js` | Sound effects built from the kit's `sfx` synth. |
-| `tools/` | `solver.js` (solver, ace scan, hole validator), `solve.mjs` (course report), `acemap.mjs`, `probe.mjs`, `humanlike.mjs`, `autoplay.js` (browser autoplayer). |
+| `tools/` | `solver.js` (solver, ace scan, hole validator), `solve.mjs` (course report), `acemap.mjs`, `probe.mjs`, `humanlike.mjs`, `autoplay.js` (browser autoplayer), `daily-check.js` (daily fairness checks), `make-dailies.mjs` (writes the daily table and proofs), `daily-proofs.json` (per-day proof data), `daily-stats.mjs`. |
 | `tests/` | `node --test tests/`. `tests/index.js` only exists so that command works on every Node version. |
 
 ### Physics in one page
@@ -38,7 +40,8 @@ Top-down 2D mini golf. 18 holes of data on a fixed 960 x 600 logical field, a de
 - The stage ratio is 3:2, or 4:7 on portrait phones (`src/game.css`).
 
 ### Save data (`oddvale:wonky-putt`)
-`{ v, best: { holeIndex: strokes }, unlocked, aces, aceHoles, round: { i, scores[], cur: { strokes, x, y, open[] } | null, mulligans } | null, bestRound, rounds, skin }`. `makeSave` repairs anything malformed. Never break old saves: add fields with defaults, migrate on `v`.
+`{ v: 2, best: { holeIndex: strokes }, unlocked, aces, aceHoles, round: { i, scores[], cur: { strokes, x, y, open[] } | null, mulligans } | null, bestRound, rounds, skin, daily }`.
+`daily` (added in v2 / 1.1.0) is `{ history: { 'YYYY-MM-DD': { s: strokes, p: par, k: 1 holed | 0 not } }, cur: { date, strokes, x, y } | null, bestStreak, practice: { date, best } | null }`. `cur` is the official try in progress; it is written when a putt is taken (so reloading mid-roll still costs the stroke and puts the ball back where it was hit) and when the ball stops. The result is written the moment the ball drops. History keeps the last 400 days. `makeSave` / `repairDaily` repair anything malformed; v1 saves just gain an empty `daily`. Never break old saves: add fields with defaults, migrate on `v`.
 
 ## Hole format
 A hole is one object in `HOLES`. Everything except `name`, `par`, `tee`, `cup` and `green` is optional.
@@ -93,20 +96,38 @@ Design rules that have held up:
 - Moving parts must stay at least a ball width (plus a little) from walls at every position; the validator checks sliders at both ends of travel and spinners over their whole sweep.
 - Fairness beats difficulty. Water lanes should be at least 90 px wide where a first-time player has to thread them.
 
-## Balance notes (v1.0.0)
+## Balance notes (v1.1.0)
+- Dailies, first year (2026-11-25 .. 2027-11-24, `node tools/daily-stats.mjs --days=365`): par 2: 25, par 3: 234, par 4: 100, par 5: 6. Mean par Mon 2.88, Tue 2.79, Wed 3.15, Thu 3.40, Fri 3.42, Sat 3.48, Sun 3.54. The solver needs 1 stroke on 232, 2 on 132, 3 on one. The noisy player averages about 1 under par (as on the course, where it averages 37 against par 57) and was over par on 147 of 2,920 runs.
+- Daily par is generous on purpose: the official try is everyone's first look at that hole.
+
+### Course (v1.0.0)
 - Course par 57. The solver finishes most holes in 1 and the rest in 2; the jittery "knows every line" bot in `tools/humanlike.mjs` averages about 40. A first-time human should land near or over par.
 - Medals (`roundMedal` in `save.js`): Odd Legend at 14 under, Golden Gear at 7 under, Silver Sprocket at par, Bronze Bolt up to 12 over.
 - Skins unlock at 8, 16, 24, 32, 40 and 48 stars of 54.
 - Holes 14, 17 and 18 have no known hole-in-one. That is fine, but a discoverable one would be a nice update.
 
+## Daily hole (read before touching `src/daily.js`)
+One hole per local date, the same for everyone. How a date becomes a hole:
+1. `hashString('wonky-putt:' + date)` seeds `makeRng`; each draw from it is the sub-seed of one candidate (`attempt` 0, 1, 2 ...).
+2. `dailyCandidate(date, attempt)` builds a hole with integer maths only (no `Math.sin/cos/atan2/hypot`; only `+ - * /` and `Math.floor/trunc/round`), so every browser builds byte-identical data. The weekday (`DAY_PLAN`) sets how many mechanics are combined (Mon/Tue 1, Wed-Fri 2, Sat/Sun 3) and the allowed par range. Layouts: lane, dogleg, U-turn, two rooms, bowl. Mechanics are placed along the tee-to-cup path, each in its own stretch; then an optional mirror; then robots, a name and a hint. Walls of daily holes may run past the green's edge; the renderer trims them to the green.
+3. `tools/make-dailies.mjs` (node, worker threads, about 2.5 minutes a year on 16 cores) walks the candidates and keeps the first that passes `assessDaily` in `tools/daily-check.js`: valid data; no straight full-power ace and no ace from simply aiming at the cup; the solver finishes it in 4 or fewer on a 3-degree grid; under 2% of first putts ace it; a noisy player (aim +-2.5 deg, power +-6%) never nears the stroke limit and makes par in at least 3 of 4 tries; par fits the weekday band; and from the worst resting spots that random and noisy play reach, the solver still finishes in 3 (no stuck spots). Par = `max(solver + 1, ceil(noisy mean + 0.5))`, clamped to 2..5.
+4. It appends `<attempt>.<par>` per date to `src/daily-table.js` and the proof (solver line, noisy scores, hole hash) to `tools/daily-proofs.json`. The game only reads the table, so no physics runs at load and float differences between browsers can never change which hole is published. Dates past the end of the table reuse the entry from 52 weeks earlier (same weekday): a safety net, not a plan.
+
+**The rule: generator changes alter everyone's daily.** Any change to `dailyCandidate` and its helpers, the name or hint lists, `DAY_PLAN`, the kit's `makeRng` / `hashString`, or the order or number of `rng` calls changes published holes, breaks players' saved results and resumes, and makes two players on different versions see different holes. `tests/daily.test.js` holds a snapshot of five dates and checks every table day against its proof hash. If those fail, you changed the holes: do not paste in new hashes or regenerate the table. To change the generator, add a new code path chosen by date (for example `if (daysBetween(GEN2_START, key) >= 0)`) that only affects dates after the table's last published day, and keep the old path byte-for-byte. Physics and `validateHole` changes are just as dangerous: the tests replay each day's solver line and re-run the solver over the first year, so if they fail, published dailies may no longer be fair.
+
+**Extending the table** (do it well before it runs out; `node --test` warns when fewer than 60 days are left): `node tools/make-dailies.mjs` adds a year after the last date (or `--to=YYYY-MM-DD`). It never rewrites existing days. Then run `node tools/daily-stats.mjs` and `node --test tests/`, and look at a few new holes in the browser (`?debug`, then `__game.daily('2028-01-03', 'dailyPractice')`). The fresh-solver test covers the first 365 days from `DAILY_START`; widen it if you want later years re-solved too (about 30 s a year).
+
+Game flow: the title shows today's status (not played, in progress, or result and streak). The first press shows a short intro card; "Tee off" starts the official try (no restarts: R and the menu refuse). When it ends, the daily card shows the result, streak, best streak, the last seven days and Copy result; "Practise it" starts unlimited practice runs (`kind: 'dailyPractice'`) that only track a practice best. An official try left unfinished on a past date is offered first ("Finish yesterday's daily") and counts for its own date. A day counts toward the streak only when the ball was holed in the official try. Daily holes do not touch course stars, bests or the ace counter.
+
 ## Testing in a browser
-- `?debug` exposes `window.__game`: `goto(i)`, `shoot(deg, power)`, `state()`, `advance(seconds)` (runs the loop without waiting for frames; background tabs throttle `requestAnimationFrame`), `unlockAll()`, `action(name, arg)`.
+- `?debug` exposes `window.__game`: `goto(i)`, `shoot(deg, power)`, `state()`, `advance(seconds)` (runs the loop without waiting for frames; background tabs throttle `requestAnimationFrame`), `unlockAll()`, `action(name, arg)`, `daily(date, kind)` (`kind` 'daily' goes through the real flow; 'dailyPractice' just loads that date's hole), `dailyHole(date)`, `setToday(date)`, `lastShare()`. `?debug&date=YYYY-MM-DD` pretends today is that date.
+- `auto.playHole(__game)` from `tools/autoplay.js` also plays the daily hole.
 - `const auto = await import('./tools/autoplay.js'); auto.playRound(__game)` plays a whole round through the real result cards and scorecard.
 - Before shipping: no console errors or warnings, play at desktop size and at about 390 x 800, check keyboard-only play, reload mid-round and continue.
 
 ## Backlog (ideas for future updates)
 - A second course ("The Back Garden"): nine night holes with new parts. The structure to add is a `course` field or a second array plus a course picker on the title screen.
-- Daily hole: one seeded remix a day (mirror a hole, move the cup, change mover phases) using the kit's `makeRng` and `hashString`, with a local best.
+- Daily: an archive of past dailies (practice only, never streak credit); a streak freeze; a share image; a countdown to the next hole; daily-only parts (wind, a magnet) behind a generator switch dated after the table's end (see "Daily hole"). Names repeat now and then (286 distinct in the first year).
 - New parts: a loop or tunnel that hides the ball for a moment, a magnet that bends paths, a ramp that lets the ball hop a wall, a rotating one-way turnstile, a second ball to knock in ("snooker hole"), wind that changes each stroke.
 - Ghost of your best run on a hole, drawn as a faint dotted path.
 - Replay of a hole-in-one with a share-friendly still.

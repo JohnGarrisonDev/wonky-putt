@@ -130,6 +130,8 @@ export function createRenderer(canvas) {
     applyView(g)
     g.lineJoin = 'round'; g.lineCap = 'round'
     const walls = comp.hole.walls || []
+    // generated daily holes let walls run past the edge; trim them to the green (plus the border) so nothing pokes out
+    if (comp.hole.date) { polyPath(g, comp.green); g.save(); g.lineWidth = 0; g.clip() }
     for (let pass = 0; pass < 2; pass++) for (const wl of walls) {
       if (wl.line) {
         const [x1, y1, x2, y2] = wl.line, w = wl.w || 16
@@ -142,6 +144,7 @@ export function createRenderer(canvas) {
         else { polyPath(g, pts); g.fillStyle = C.paper; g.fill(); g.strokeStyle = C.ink; g.lineWidth = 3; g.stroke() }
       }
     }
+    if (comp.hole.date) { g.restore(); polyPath(g, comp.green); g.strokeStyle = C.ink; g.lineWidth = 3; g.stroke() }
   }
 
   // ---------- dynamic pieces

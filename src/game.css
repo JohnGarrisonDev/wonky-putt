@@ -88,6 +88,27 @@
 .unlock .ball { width: 30px; height: 30px; box-shadow: none; } .unlock .ball svg { width: 20px; height: 20px; }
 .cell.locked .ball { filter: grayscale(1); opacity: .5; }
 
+/* daily hole */
+.daily-row { display: grid; gap: 5px; }
+.daily-row .btn { width: 100%; }
+.panel .daily-status { font: 500 11px/1.35 var(--font-mono); letter-spacing: .04em; color: var(--p-muted); text-transform: uppercase; }
+.panel .dname { font: 800 19px/1.2 var(--font-display); font-variation-settings: "SOFT" 100, "WONK" 1; color: var(--p-ink2); margin-top: -4px; }
+.streak { display: flex; gap: 28px; }
+.streak div { display: grid; justify-items: center; }
+.streak b { font: 800 30px/1 var(--font-display); font-variation-settings: "SOFT" 100, "WONK" 1; }
+.streak span { font: 500 10.5px/1.2 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--p-muted); }
+.week { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.week li { display: grid; justify-items: center; gap: 3px; }
+.week li span { display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid var(--p-ink); border-radius: 50%; background: #fffdf8; font: 800 14px/1 var(--font-body); color: var(--p-ink); }
+.week li small { font: 500 10px/1 var(--font-mono); color: var(--p-muted); }
+.week li.today small { color: var(--p-ink); font-weight: 700; }
+.week li.today span { box-shadow: 2px 2px 0 var(--p-ink); }
+.week li.none span { border-style: dashed; border-color: #b9ad97; background: transparent; }
+.week li.under span { background: var(--mint); }
+.week li.ace span { background: var(--yellow); }
+.week li.over span { background: var(--pink); border-radius: 6px; }
+.week li.miss span { background: #f1e7d3; border-radius: 6px; color: var(--p-muted); }
+
 /* final scorecard */
 .cards { display: grid; gap: 8px; width: 100%; }
 table.card { width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid var(--p-ink); border-radius: 12px; overflow: hidden; background: #fffdf8; table-layout: fixed; font: 500 13px/1 var(--font-mono); }
@@ -119,3 +140,4 @@ table.card td.over span { border-color: var(--p-ink); border-radius: 3px; backgr
   table.card th { font-size: 9px; padding-left: 5px; letter-spacing: 0; }
 }
 @media (max-height: 460px) { .panel { padding: 12px 16px 14px; gap: 6px; } .panel .logo-title { font-size: 40px; } .panel .how { display: none; } }
+.share-text { width: 100%; resize: none; padding: 8px 10px; border: 2px solid var(--p-ink); border-radius: 12px; background: #fffdf8; color: var(--p-ink); font: 500 12px/1.4 var(--font-mono); }

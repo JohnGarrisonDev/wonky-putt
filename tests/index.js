@@ -2,3 +2,4 @@
 import './physics.test.js'
 import './holes.test.js'
 import './save.test.js'
+import './daily.test.js'

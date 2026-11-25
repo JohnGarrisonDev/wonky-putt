@@ -8,6 +8,7 @@ Mini golf on a course built by the odd little robots of Oddvale, where nothing i
 - Slow balls drop in the cup, fast balls hop over it.
 - Sand, water, ice, slopes and conveyor belts, boost pads, bumpers, sliding blocks, windmills, pipes that teleport, a button-operated door and a one-way gate.
 - Play a full round for a scorecard and a medal, or practise any hole you have unlocked. Stars per hole (3 under par, 2 par, 1 finished) unlock new balls. Rounds resume after a reload.
+- **Daily hole**: a new generated hole every day, the same for everyone. One official try (strokes until it drops, or par + 5), then unlimited practice that does not count. Streaks, a seven-day strip and a Copy result line. Gentle early in the week, harder at the weekend.
 
 ## Controls
 - Mouse or touch: press anywhere, pull back, release. Longer pull, harder putt.
@@ -21,13 +22,15 @@ node ../oddvale-games/scripts/serve.mjs . 4302     # the hub's tiny server, or a
 # then open http://127.0.0.1:4302/
 ```
 
-Add `?debug` to the URL for a `window.__game` hook used in automated play-testing.
+Add `?debug` to the URL for a `window.__game` hook used in automated play-testing (`&date=YYYY-MM-DD` pretends it is another day).
 
 ## Test it
 ```
 node --test tests/        # physics invariants, hole data checks, and a solver that proves every hole can be finished within par
 node tools/solve.mjs      # course report: fewest strokes found per hole and how ace-able each one is
 node tools/humanlike.mjs  # rough expected score per hole for a player with shaky thumbs
+node tools/daily-stats.mjs   # par, solver and difficulty stats for the published daily holes
+node tools/make-dailies.mjs  # extend the daily table by a year (see AGENTS.md first)
 ```
 
 ## Layout
@@ -38,6 +41,8 @@ cover.webp        cover art (supplied separately)
 src/main.js       game flow: title, rounds, practice, result cards, scorecard, the frame loop
 src/physics.js    deterministic fixed-step simulation (no DOM): ball, walls, zones, movers, portals, cup
 src/holes.js      the 18 holes as data
+src/daily.js      the daily hole: date seed, generator, streaks, share line
+src/daily-table.js  which generated candidate (and par) each date uses; written by tools/make-dailies.mjs
 src/render.js     canvas drawing, particles, the landscape/portrait view transform
 src/input.js      slingshot pointer aim and keyboard aim
 src/ui.js         DOM overlays: HUD, menus, result card, scorecard, hole select, balls
@@ -45,7 +50,7 @@ src/audio.js      synthesised sound effects
 src/save.js       scoring rules, ball skins, save data
 src/game.css      stage shape, HUD and overlay styles
 kit/              copy of the Oddvale kit (do not edit; re-copy from the hub)
-tools/            solver, course report, ace map, shot probe, browser autoplayer
+tools/            solver, course report, ace map, shot probe, browser autoplayer, daily generator checks and proofs
 tests/            node tests
 ```
 

@@ -1,6 +1,6 @@
 // DOM overlays inside the stage: HUD, hint toast, and the menu screens (title, pause, result, scorecard, hole select, balls).
 // Screens are plain HTML built from data; every button carries data-act and main.js handles the action.
-import { SKINS, starsFor, fmtDiff } from './save.js'
+import { SKINS, starsFor, fmtDiff, resultName } from './save.js'
 
 const STAR = (on) => `<svg class="star${on ? ' on' : ''}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.5.9-4.7 4.6 1.1 6.5L12 17.5l-5.8 3.1 1.1-6.5L2.6 9.5l6.5-.9z"/></svg>`
 export const starsHtml = (n, label = true) => `<span class="stars"${label ? ` role="img" aria-label="${n} of 3 stars"` : ''}>${STAR(n > 0)}${STAR(n > 1)}${STAR(n > 2)}</span>`
@@ -8,6 +8,14 @@ const face = (ink, eye) => `<svg viewBox="0 0 64 64" aria-hidden="true"><circle 
 const ballHtml = (s) => `<span class="ball" style="background:${s.fill}">${face(s.ink, s.eye)}</span>`
 const MENU_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg>'
 const LOCK = '<svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+/** The last days as a strip of marks: circle = under par, plain = par, square = over, cross = not holed, dashed = not played. */
+const weekStrip = (days) => `<ol class="week" aria-label="Last ${days.length} days">${days.map((d) => {
+  const r = d.rec, cls = !r ? 'none' : !r.k ? 'miss' : r.s === 1 ? 'ace' : r.s < r.p ? 'under' : r.s === r.p ? 'par' : 'over'
+  const label = !r ? 'not played' : !r.k ? `${r.s} strokes, not holed` : `${r.s} ${r.s === 1 ? 'stroke' : 'strokes'}, par ${r.p}`
+  return `<li class="${cls}${d.today ? ' today' : ''}" title="${d.key}: ${label}" aria-label="${d.key}: ${label}"><span>${r ? (r.k ? r.s : '×') : ''}</span><small>${d.day}</small></li>`
+}).join('')}</ol>`
+const streakHtml = (st) => `<div class="streak"><div><b>${st.current}</b><span>day streak</span></div><div><b>${st.best}</b><span>best</span></div></div>`
 const btn = (act, label, cls = '', arg = '') => `<button type="button" class="btn ${cls}" data-act="${act}"${arg !== '' ? ` data-arg="${arg}"` : ''}>${label}</button>`
 
 export function createUI(stage, onAction) {
@@ -47,13 +55,14 @@ export function createUI(stage, onAction) {
   const ui = {
     get screen() { return screen },
     hide() { screen = null; overlay.hidden = true; overlay.innerHTML = ''; if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur() },
-    hud({ show: on, no, total, par, name, strokes, round }) {
+    hud({ show: on, no, total, par, name, strokes, round, label, chip = 'Round' }) {
       hud.hidden = !on
       if (!on) return
-      h('label').textContent = `Hole ${no}/${total} · Par ${par}`
+      h('label').textContent = label || `Hole ${no}/${total} · Par ${par}`
       h('name').textContent = name
       h('strokes').textContent = strokes
       h('roundchip').hidden = round == null
+      h('roundchip').querySelector('small').textContent = chip
       if (round != null) h('round').textContent = round
     },
     strokes(n, limit) { const s = h('strokes'); s.textContent = n; s.parentElement.classList.toggle('warn', n >= limit - 1) },
@@ -64,31 +73,86 @@ export function createUI(stage, onAction) {
       if (text && ms) toastTimer = setTimeout(() => toast.classList.remove('on'), ms)
     },
 
-    title({ round, stars, maxStars, aces, bestRound, anyProgress }) {
+    /** daily: { label, status, todo }. todo = today's official try is not finished yet (it becomes the main button). */
+    title({ round, stars, maxStars, aces, bestRound, anyProgress, daily }) {
       show('title', `
-        <span class="eyebrow">Oddvale mini golf · 18 holes</span>
+        <span class="eyebrow">Mini golf · 18 holes + a daily</span>
         <h2 class="logo-title">Wonky <em>Putt</em></h2>
         <p class="sub">The robots built a golf course. Nothing on it is straight.</p>
         <div class="btns col">
-          ${round ? btn('continue', `Continue round <small>hole ${round.i + 1}</small>`, 'primary') : ''}
-          ${btn('newround', round ? 'New round' : 'Play round', round ? '' : 'primary')}
+          <div class="daily-row">${btn('daily', daily.label, daily.todo ? 'primary' : '')}<p class="daily-status">${daily.status}</p></div>
+          ${round ? btn('continue', `Continue round <small>hole ${round.i + 1}</small>`, daily.todo ? '' : 'primary') : ''}
+          ${btn('newround', round ? 'New round' : 'Play round', round || daily.todo ? '' : 'primary')}
           <div class="btns">${btn('select', 'Hole select', 'small')}${btn('skins', 'Balls', 'small')}</div>
         </div>
         <p class="how">Press anywhere, pull back, let go. Or aim with <kbd>←</kbd><kbd>→</kbd> and putt with <kbd>Space</kbd>.</p>
         ${anyProgress ? `<p class="stats">${STAR(true)} ${stars}/${maxStars} <i>·</i> Aces ${aces} <i>·</i> Best round ${bestRound ?? '—'}</p>` : ''}`, { clear: true })
     },
     menu({ kind, no, name, par, hint }) {
+      const daily = kind === 'daily' || kind === 'dailyPractice'
+      const where = kind === 'daily' ? 'daily, official try' : kind === 'dailyPractice' ? 'daily practice' : `hole ${no}`
+      const note = kind === 'round' ? 'Your round is saved after every putt.'
+        : kind === 'daily' ? 'This is your one official try, so no restarts. It is saved after every putt: quit and come back any time.'
+          : kind === 'dailyPractice' ? 'Practice runs never change your daily score.' : ''
       show('menu', `
-        <span class="eyebrow">Paused · hole ${no} · par ${par}</span>
-        <h2>${name}</h2>
+        <span class="eyebrow">Paused · ${where} · par ${par}</span>
+        <h2>${esc(name)}</h2>
         ${hint ? `<p class="sub">${hint}</p>` : ''}
         <div class="btns col">
           ${btn('resume', 'Keep putting', 'primary')}
-          ${btn('retry', kind === 'round' ? 'Restart hole <small>mulligan</small>' : 'Restart hole <small>R</small>')}
-          ${btn('select', 'Hole select')}
+          ${kind === 'daily' ? '' : btn('retry', kind === 'round' ? 'Restart hole <small>mulligan</small>' : 'Restart hole <small>R</small>')}
+          ${kind === 'dailyPractice' ? btn('dailycard', 'Daily card') : daily ? '' : btn('select', 'Hole select')}
           ${btn('quit', 'Quit to title')}
         </div>
-        ${kind === 'round' ? '<p class="note">Your round is saved after every putt.</p>' : ''}`)
+        ${note ? `<p class="note">${note}</p>` : ''}`)
+    },
+    /** Before the official try. */
+    dailyIntro({ date, dayName, dayLabel, name, par, hint, streak }) {
+      show('dailyintro', `
+        <span class="eyebrow">Daily hole · ${dayName} ${date}</span>
+        <h2>${esc(name)}</h2>
+        <p class="score"><b>Par ${par}</b> <i>·</i> ${dayLabel}</p>
+        <p class="sub">${hint}</p>
+        <p class="note">One official try: every stroke counts until the ball drops, or par + 5. After that, practise it as often as you like. Same hole for everyone today.</p>
+        ${streak.current ? `<p class="note">You are on a ${streak.current}-day streak. Sink it to keep it going.</p>` : ''}
+        <div class="btns">${btn('teeoff', 'Tee off', 'primary')}${btn('back', 'Back', '', 'title')}</div>`)
+    },
+    /** The official result, right after the try or any time later. rec: { s, p, k }. */
+    dailyCard({ date, name, rec, streak, days, fresh, practiceBest, isToday }) {
+      const title = resultName(rec.s, rec.p, rec.k === 1), d = rec.s - rec.p
+      const vs = !rec.k ? 'not holed' : d === 0 ? 'level par' : d < 0 ? `${-d} under par` : `${d} over par`
+      const first = fresh ? (rec.k ? 'That one counts.' : 'The robots moved you on. No streak point today.') : 'Your official score for the day.'
+      show('dailycard', `
+        <span class="eyebrow">Daily · ${date} · par ${rec.p}</span>
+        <h2 class="${rec.k && rec.s === 1 ? 'ace' : ''}">${title}</h2>
+        <p class="dname">"${esc(name)}"</p>
+        <p class="score"><b>${rec.s}</b> ${rec.s === 1 ? 'stroke' : 'strokes'}${rec.k ? '' : ' (limit)'} <i>·</i> ${vs}</p>
+        ${streakHtml(streak)}
+        ${weekStrip(days)}
+        <p class="note">${first} ${practiceBest ? `Practice best: ${practiceBest}.` : 'Practise it as often as you like; practice never counts.'}${isToday ? ' A new hole rolls out at midnight.' : ''}</p>
+        <div class="btns">${btn('copy', 'Copy result', 'primary')}${btn('practise', 'Practise it')}${btn('back', 'Title', '', 'title')}</div>`)
+    },
+    practiceResult({ name, par, strokes, sunk, best, newBest, official }) {
+      const off = official ? ` Your official score: ${official.s} (${resultName(official.s, official.p, official.k === 1)}).` : ''
+      show('result', `
+        <span class="eyebrow">Practice · ${esc(name)} · par ${par}</span>
+        <h2>${resultName(strokes, par, sunk)}</h2>
+        <p class="score"><b>${strokes}</b> ${strokes === 1 ? 'stroke' : 'strokes'}${sunk ? '' : ' (limit)'} <i>·</i> ${newBest ? '<span class="tag">Practice best</span>' : `practice best ${best || '—'}`}</p>
+        <p class="note">Practice does not count.${off}</p>
+        <div class="btns">${btn('retry', 'Again', 'primary')}${btn('dailycard', 'Daily card')}${btn('back', 'Title', '', 'title')}</div>`)
+    },
+    /** Flash "Copied!" (or a failure note) on the copy button. */
+    copied(ok, text) {
+      const b = overlay.querySelector('[data-act="copy"]')
+      if (!b) return
+      b.textContent = ok ? 'Copied!' : 'Copy it below'
+      if (!ok && text && !overlay.querySelector('.share-text')) {
+        // the browser said no (permissions, old browser): show the line so it can be copied by hand
+        const ta = document.createElement('textarea')
+        ta.className = 'share-text'; ta.readOnly = true; ta.rows = 3; ta.value = text; ta.setAttribute('aria-label', 'Result to copy')
+        b.closest('.btns').before(ta); ta.focus(); ta.select()
+      }
+      setTimeout(() => { if (b.isConnected) b.textContent = 'Copy result' }, 1600)
     },
     result({ kind, no, par, name, title, quip, strokes, sunk, stars, best, newBest, ace, roundLine, last, newSkins, nextLocked }) {
       const next = kind === 'round'
