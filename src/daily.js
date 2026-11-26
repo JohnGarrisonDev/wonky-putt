@@ -36,6 +36,14 @@ export function daysBetween(a, b) {
   const u = (k) => { const [y, m, d] = k.split('-').map(Number); return Date.UTC(y, m - 1, d) }
   return Math.round((u(b) - u(a)) / 86400000)
 }
+/** Milliseconds from d to the next local midnight, when the next daily hole rolls out. */
+export function msToMidnight(d = new Date()) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() - d.getTime() }
+/** "5h 07m", "42m", "1m" (rounded up, so it never says 0m while time is left), or "" once it is time. */
+export function fmtCountdown(ms) {
+  if (!(ms > 0)) return ''
+  const m = Math.ceil(ms / 60000), h = Math.floor(m / 60), mm = m % 60
+  return h ? `${h}h ${String(mm).padStart(2, '0')}m` : `${mm}m`
+}
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 /** "25 Nov" */
 export const shortDate = (key) => { const [, m, d] = key.split('-').map(Number); return `${d} ${MONTHS[m - 1]}` }
@@ -94,15 +102,21 @@ const HINTS = {
 const BALL_R = 10
 const FW = 960, FH = 600
 
+// Generator revisions, chosen by date so a published daily never changes (see AGENTS.md, "Daily hole").
+// GEN2 (1.4.0, dates from GEN2_START): a sand bunker may not touch a wall or come within a ball radius of it (a room divider, the U-turn wall, a windmill's
+// funnel blocks). The check makes no rng calls; it only throws such a candidate away, so every candidate that GEN2 keeps
+// is byte-identical to what GEN1 builds, and dates before GEN2_START are untouched.
+export const GEN2_START = '2026-11-28'
+
 /** One candidate hole for a date. attempt 0, 1, 2 ... are independent candidates from the same date seed. */
 export function dailyCandidate(key, attempt = 0) {
   const top = makeRng(hashString('wonky-putt:' + key))
   let sub = 0
   for (let k = 0; k <= attempt; k++) sub = Math.floor(top() * 4294967296)
-  return buildCandidate(makeRng(sub), weekday(key))
+  return buildCandidate(makeRng(sub), weekday(key), daysBetween(GEN2_START, key) >= 0 ? 2 : 1)
 }
 
-function buildCandidate(rng, wd) {
+function buildCandidate(rng, wd, gen = 1) {
   const ri = (lo, hi) => lo + rng.int(hi - lo + 1)
   const chance = (pct) => rng.int(100) < pct
   const pick = (arr) => arr[rng.int(arr.length)]
@@ -124,7 +138,7 @@ function buildCandidate(rng, wd) {
   const L = layout(kind, needsRooms, ri, chance)
   const hole = { name: '', par: 3, hint: '', tee: L.tee, cup: L.cup, green: L.green, walls: L.walls, zones: [], bumpers: [], movers: [], portals: [], decor: [] }
   const keep = [{ c: [L.tee[0], L.tee[1], 46] }, { c: [L.cup[0], L.cup[1], 46] }]
-  const ctx = { rng, ri, chance, pick, L, hole, keep, ok: true }
+  const ctx = { rng, ri, chance, pick, L, hole, keep, ok: true, gen }
 
   // each mechanic gets its own stretch of the tee-to-cup path, in a random order
   const order = mechs.slice()
@@ -252,6 +266,16 @@ function freeRect(keep, rect, margin = 0) {
   }
   return true
 }
+/** GEN2: does a circle (grown by a ball radius) touch any rect wall placed so far? Rotated rects count with their full turn. */
+function touchesWall(hole, x, y, r) {
+  for (const wl of hole.walls) {
+    if (!wl.rect) continue
+    const [rx, ry, rw, rh] = wl.rect, m = wl.rot ? Math.ceil(Math.max(rw, rh) / 4) : 0
+    const qx = Math.max(rx - m, Math.min(x, rx + rw + m)), qy = Math.max(ry - m, Math.min(y, ry + rh + m))
+    if (sq(x - qx) + sq(y - qy) < sq(r + BALL_R)) return true
+  }
+  return false
+}
 const inRect = (r, x, y) => x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3]
 const centre = (slot) => (slot[0] + slot[1]) >> 1
 
@@ -268,6 +292,7 @@ const PLACE = {
         const r = ri(34, 48), gap = r + ri(26, 40)
         const [x, y] = xy(s, ca + da * gap + (da ? 0 : ri(-24, 24)), cc + dc * gap + (dc ? 0 : ri(-18, 18)))
         if (!free(keep.slice(2), x, y, r + 8)) return false
+        if (ctx.gen >= 2 && touchesWall(hole, x, y, r)) return false
         hole.zones.push({ type: 'sand', circle: [x, y, r] })
         keep.push({ c: [x, y, r] })
       }
@@ -277,6 +302,7 @@ const PLACE = {
     const r = Math.max(40, Math.min(ri(55, 110), (w >> 1) - 5)), across = ((s.lo + s.hi) >> 1) + ri(-Math.floor(w / 5), Math.floor(w / 5))
     const [x, y] = xy(s, along, across)
     if (!free(keep, x, y, r + 4)) return false
+    if (ctx.gen >= 2 && touchesWall(hole, x, y, r)) return false
     hole.zones.push({ type: 'sand', circle: [x, y, r] })
     keep.push({ c: [x, y, r] })
     return true
@@ -525,5 +551,5 @@ export function recentDays(history, today, n = 7) {
 }
 /** Spoiler-free result line for the clipboard. */
 export function shareText(key, name, rec, resultLabel) {
-  return `Wonky Putt daily ${key} · "${name}" · ${rec.s} ${rec.s === 1 ? 'stroke' : 'strokes'} (par ${rec.p}) · ${resultLabel.replace(/!$/, '')}\ngames.oddvale.com/wonky-putt`
+  return `Wonky Putt daily ${key} · "${name}" · ${rec.s} ${rec.s === 1 ? 'stroke' : 'strokes'} (par ${rec.p}) · ${resultLabel.replace(/!$/, '')}\nhttps://games.oddvale.com/wonky-putt/`
 }

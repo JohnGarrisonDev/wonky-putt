@@ -10,7 +10,7 @@ Top-down 2D mini golf. 18 holes of data plus a generated daily hole on a fixed 9
 | --- | --- |
 | `src/physics.js` | The simulation. No DOM. `compileHole(hole)` turns hole data into segments, zones and object lists; `createWorld` / `cloneWorld` / `shoot` / `step` / `settle` run it; `previewPath` gives the dotted aim line. Fixed step `DT = 1/120`. |
 | `src/holes.js` | `HOLES`, the course. Plain data. |
-| `src/daily.js` | The daily hole: date helpers, `dailyCandidate(date, attempt)` (the generator), `dailyHole(date)`, streaks, the share line. No DOM. |
+| `src/daily.js` | The daily hole: date helpers, `dailyCandidate(date, attempt)` (the generator, with `GEN2_START`), `dailyHole(date)`, streaks, the share line, `msToMidnight` / `fmtCountdown` for the "next hole in" countdown. No DOM. |
 | `src/daily-table.js` | Generated. For each date from `DAILY_START`: which candidate is published and its par. |
 | `src/main.js` | Owns the flow (title, round, practice, result card, scorecard), the frame loop, turning physics events into sound and particles, the keyboard, and the `?debug` hook. |
 | `src/render.js` | Everything drawn on the canvas, the particle pool, and the view transform (landscape, or rotated 90 degrees on tall stages). |
@@ -105,6 +105,7 @@ Design rules that have held up:
 - Course par 57. The solver finishes most holes in 1 and the rest in 2; the jittery "knows every line" bot in `tools/humanlike.mjs` averages about 40. A first-time human should land near or over par.
 - Medals (`roundMedal` in `save.js`): Odd Legend at 14 under, Golden Gear at 7 under, Silver Sprocket at par, Bronze Bolt up to 12 over.
 - Skins unlock at 8, 16, 24, 32, 40 and 48 stars of 54.
+- 1.4.0, hole 8 (The Boing Department): two sand strips along the long sides. Random first putts that ace (fast `aceScan`): 2.18% -> 0.51%; 10-degree aim slices that can ace: 24 -> 5; `humanlike` mean 1.58 -> 1.88 (par 3). Other holes' ace shares (fast scan): 1: 2.94% (the gimme, on purpose), 6: 1.09%, 16: 1.18%, the rest under 0.7%.
 - Holes 14, 17 and 18 have no known hole-in-one. That is fine, but a discoverable one would be a nice update.
 
 ## Daily hole (read before touching `src/daily.js`)
@@ -116,9 +117,16 @@ One hole per local date, the same for everyone. How a date becomes a hole:
 
 **The rule: generator changes alter everyone's daily.** Any change to `dailyCandidate` and its helpers, the name or hint lists, `DAY_PLAN`, the kit's `makeRng` / `hashString`, or the order or number of `rng` calls changes published holes, breaks players' saved results and resumes, and makes two players on different versions see different holes. `tests/daily.test.js` holds a snapshot of five dates and checks every table day against its proof hash. If those fail, you changed the holes: do not paste in new hashes or regenerate the table. To change the generator, add a new code path chosen by date (for example `if (daysBetween(GEN2_START, key) >= 0)`) that only affects dates after the table's last published day, and keep the old path byte-for-byte. Physics and `validateHole` changes are just as dangerous: the tests replay each day's solver line and re-run the solver over the first year, so if they fail, published dailies may no longer be fair.
 
+**Generator revisions (1.4.0).** `buildCandidate` takes a `gen` number picked by date: dates on or after `GEN2_START` (2026-11-28) use GEN2, which throws away any candidate whose sand bunker touches a wall or comes within a ball radius of one (`touchesWall`; room dividers, the U-turn wall, windmill funnel blocks). The check makes no rng calls, so a candidate GEN2 keeps is byte-identical to the GEN1 build; only the choice of attempt can move. `node tools/make-dailies.mjs --redo-gen` re-picked the 19 table days whose listed candidate GEN2 rejects (2026-11-29 onwards; nothing on or before 2026-11-27 changed, and `tests/daily.test.js` pins 2026-11-25..27 to their 1.3.0 hashes). Use the same pattern for the next change: a new `GENn_START` after the last date anyone can have seen (allow for time zones: at least two days ahead), a check that only rejects, then `--redo-gen` (it compares against the newest rule only, so give each revision its own start check if you add GEN3).
+
 **Extending the table** (do it well before it runs out; `node --test` warns when fewer than 60 days are left): `node tools/make-dailies.mjs` adds a year after the last date (or `--to=YYYY-MM-DD`). It never rewrites existing days. Then run `node tools/daily-stats.mjs` and `node --test tests/`, and look at a few new holes in the browser (`?debug`, then `__game.daily('2028-01-03', 'dailyPractice')`). The fresh-solver test covers the first 365 days from `DAILY_START`; widen it if you want later years re-solved too (about 30 s a year).
 
 Game flow: the title shows today's status (not played, in progress, or result and streak). The first press shows a short intro card; "Tee off" starts the official try (no restarts: R and the menu refuse). When it ends, the daily card shows the result, streak, best streak, the last seven days and Copy result; "Practise it" starts unlimited practice runs (`kind: 'dailyPractice'`) that only track a practice best. An official try left unfinished on a past date is offered first ("Finish yesterday's daily") and counts for its own date. A day counts toward the streak only when the ball was holed in the official try. Daily holes do not touch course stars, bests or the ace counter.
+
+## Title screen
+The windmill hole (`ATTRACT_HOLE`) runs behind the title. `fit()` sets `.stage.is-portrait` from `R.view.portrait`; `game.css` puts the title card on the left on wide stages and, compacted (eyebrow, tagline, how-to and stats line hidden), at the bottom on tall ones. `showAttract` sets `R.view.top = 8` and `R.view.alignTop` (portrait only: the field hugs the top of the stage); `setupHole` clears `alignTop` and `fit()` re-measures the HUD. Short screens (max-height 480px) also drop the eyebrow and tagline so the card fits 844 x 390 full screen without scrolling. `ui.js` remembers the day a screen was drawn: if the date rolls over, the title redraws itself (new daily hole); other cards' countdowns read "A new hole is out".
+
+Saved ball spots (daily `cur`, round `cur`): `repairDaily` drops spots off the 960 x 600 field (strokes kept, x/y null); `restSpotOk` in main.js also rejects spots off the green, inside a wall or within a ball radius of one, or in water, and puts the ball on the tee. `bestRound` below 18 (0, junk) becomes null.
 
 ## Phones and full screen
 - `wireChrome({ stage })` (kit) gives native full screen or the iPhone focus mode; both set `.stage.is-full`. `src/game.css` pads the HUD with `env(safe-area-inset-*)` there and keeps it clear of the kit's exit button.
@@ -135,7 +143,7 @@ Game flow: the title shows today's status (not played, in progress, or result an
 
 ## Backlog (ideas for future updates)
 - A second course ("The Back Garden"): nine night holes with new parts. The structure to add is a `course` field or a second array plus a course picker on the title screen.
-- Daily: an archive of past dailies (practice only, never streak credit); a streak freeze; a share image; a countdown to the next hole; daily-only parts (wind, a magnet) behind a generator switch dated after the table's end (see "Daily hole"). Names repeat now and then (286 distinct in the first year).
+- Daily: an archive of past dailies (practice only, never streak credit); a streak freeze; a share image; daily-only parts (wind, a magnet) behind a generator switch dated after the table's end (see "Daily hole"). Names repeat now and then (286 distinct in the first year).
 - New parts: a loop or tunnel that hides the ball for a moment, a magnet that bends paths, a ramp that lets the ball hop a wall, a rotating one-way turnstile, a second ball to knock in ("snooker hole"), wind that changes each stroke.
 - Ghost of your best run on a hole, drawn as a faint dotted path.
 - Replay of a hole-in-one with a share-friendly still.

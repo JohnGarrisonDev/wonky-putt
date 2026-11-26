@@ -1,6 +1,7 @@
 // DOM overlays inside the stage: HUD, hint toast, and the menu screens (title, pause, result, scorecard, hole select, balls).
 // Screens are plain HTML built from data; every button carries data-act and main.js handles the action.
 import { SKINS, starsFor, fmtDiff, resultName } from './save.js'
+import { msToMidnight, fmtCountdown, dateKey } from './daily.js'
 
 const STAR = (on) => `<svg class="star${on ? ' on' : ''}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.5.9-4.7 4.6 1.1 6.5L12 17.5l-5.8 3.1 1.1-6.5L2.6 9.5l6.5-.9z"/></svg>`
 export const starsHtml = (n, label = true) => `<span class="stars"${label ? ` role="img" aria-label="${n} of 3 stars"` : ''}>${STAR(n > 0)}${STAR(n > 1)}${STAR(n > 2)}</span>`
@@ -43,11 +44,27 @@ export function createUI(stage, onAction) {
   // keep presses on UI from starting an aim drag
   for (const n of [hud, overlay]) n.addEventListener('pointerdown', (e) => e.stopPropagation())
 
+  // live "next hole in ..." countdowns (1.4.0): any element with data-countdown shows the time to local midnight.
+  // When the date rolls over while a screen is open: the title redraws itself for the new day's hole; any other card
+  // says a new hole is out (its Title button leads to it).
+  let shownDay = dateKey()
+  function tickCountdowns() {
+    const rolled = dateKey() !== shownDay
+    if (rolled && screen === 'title') { onAction('back', 'title'); return }
+    for (const n of overlay.querySelectorAll('[data-countdown]')) {
+      const left = fmtCountdown(msToMidnight())
+      n.textContent = rolled || !left ? 'A new hole is out' : `Next hole in ${left}`
+    }
+  }
+  setInterval(() => { if (!overlay.hidden) tickCountdowns() }, 10000)
+
   function show(name, html, { focus = '.btn.primary', wide = false, clear = false } = {}) {
     screen = name
     overlay.className = `overlay scr-${name}${clear ? ' clear' : ''}`
     overlay.innerHTML = `<div class="panel${wide ? ' wide' : ''}" role="dialog" aria-modal="true" aria-label="${name}">${html}</div>`
     overlay.hidden = false
+    shownDay = dateKey()
+    tickCountdowns()
     const f = overlay.querySelector(focus) || overlay.querySelector('button:not([disabled])')
     if (f) f.focus({ preventScroll: true })
   }
@@ -130,7 +147,7 @@ export function createUI(stage, onAction) {
         <p class="score"><b>${rec.s}</b> ${rec.s === 1 ? 'stroke' : 'strokes'}${rec.k ? '' : ' (limit)'} <i>·</i> ${vs}</p>
         ${streakHtml(streak)}
         ${weekStrip(days)}
-        <p class="note">${first} ${practiceBest ? `Practice best: ${practiceBest}.` : 'Practise it as often as you like; practice never counts.'}${isToday ? ' A new hole rolls out at midnight.' : ''}</p>
+        <p class="note">${first} ${practiceBest ? `Practice best: ${practiceBest}.` : 'Practise it as often as you like; practice never counts.'}${isToday ? ' <b class="countdown" data-countdown></b>.' : ''}</p>
         <div class="btns">${btn('copy', 'Copy result', 'primary')}${btn('practise', 'Practise it')}${btn('back', 'Title', '', 'title')}</div>
         <div class="talk-slot" hidden></div>`)
       return overlay.querySelector('.talk-slot')

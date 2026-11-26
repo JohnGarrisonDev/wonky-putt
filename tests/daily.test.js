@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   dateKey, shiftDay, weekday, daysBetween, dailyCandidate, dailyHole, dailyEntry, dailyTableEnd, holeHash,
-  streakInfo, recentDays, shareText, DAY_PLAN,
+  streakInfo, recentDays, shareText, DAY_PLAN, GEN2_START,
 } from '../src/daily.js'
 import { DAILY_START } from '../src/daily-table.js'
 import { validateHole, solveHole } from '../tools/solver.js'
@@ -31,6 +31,36 @@ test('snapshot: published dailies never change', () => {
   const SNAP = { '2026-11-25': '96a77a87', '2026-11-30': '0246976c', '2027-01-01': '8081b4af', '2027-06-15': '476b1391', '2027-12-31': '99f56861' }
   for (const [k, h] of Object.entries(SNAP)) assert.equal(holeHash(dailyHole(k)), h, k)
   assert.equal(dailyHole('2026-11-25').name, 'Frosty Hill')
+})
+
+// 1.4.0 changed the generator (GEN2: no bunker touching a wall) for dates from GEN2_START and re-picked 19 later table
+// days. Everything players may already have seen (every time zone, up to 2026-11-27) must be exactly as it was in 1.3.0.
+test('GEN2 leaves every daily up to 2026-11-27 exactly as published in 1.3.0', () => {
+  assert.equal(GEN2_START, '2026-11-28')
+  const V13 = { '2026-11-25': ['96a77a87', 'Frosty Hill'], '2026-11-26': ['2c95f960', 'Sandy Pickle'], '2026-11-27': ['2b45b36c', 'Frosty Caper'] }
+  for (const [k, [h, name]] of Object.entries(V13)) {
+    assert.equal(holeHash(dailyHole(k)), h, k); assert.equal(dailyHole(k).name, name, k)
+    const d = PROOFS.days.find((x) => x.date === k); assert.equal(d.hash, h, k)
+  }
+  // dates before the table (archives, odd clocks) map into the 1.3.0 part of the table or a proven later day, as before
+  for (let i = 1; i <= 30; i++) { const k = shiftDay('2026-11-25', -i); assert.equal(weekday(dailyEntry(k).source), weekday(k)) }
+})
+
+test('GEN2: from GEN2_START on, no published bunker touches a wall', () => {
+  const end = dailyTableEnd()
+  for (let k = GEN2_START; daysBetween(k, end) >= 0; k = shiftDay(k, 1)) {
+    const h = dailyHole(k)
+    assert.equal(dailyCandidate(k, dailyEntry(k).attempt).ok, true, k)
+    for (const z of h.zones || []) {
+      if (z.type !== 'sand' || !z.circle) continue
+      const [x, y, r] = z.circle
+      for (const wl of h.walls || []) {
+        if (!wl.rect || wl.rot) continue
+        const [rx, ry, rw, rh] = wl.rect, qx = Math.max(rx, Math.min(x, rx + rw)), qy = Math.max(ry, Math.min(y, ry + rh))
+        assert.ok(Math.hypot(x - qx, y - qy) >= r + 10, `${k}: bunker at ${x},${y} touches a wall`)
+      }
+    }
+  }
 })
 
 test('the generator is deterministic and integer-only', () => {
@@ -106,7 +136,7 @@ test('streaks, the week strip and the share line', () => {
   const days = recentDays(H, '2026-11-25', 7)
   assert.equal(days.length, 7); assert.equal(days[6].key, '2026-11-25'); assert.equal(days[6].today, true); assert.equal(days[6].day, 'W'); assert.equal(days[0].rec, null)
   const rec = { s: 2, p: 3, k: 1 }
-  assert.equal(shareText('2026-11-25', 'Sandy Situation', rec, resultName(2, 3)), 'Wonky Putt daily 2026-11-25 · "Sandy Situation" · 2 strokes (par 3) · Birdie\ngames.oddvale.com/wonky-putt')
+  assert.equal(shareText('2026-11-25', 'Sandy Situation', rec, resultName(2, 3)), 'Wonky Putt daily 2026-11-25 · "Sandy Situation" · 2 strokes (par 3) · Birdie\nhttps://games.oddvale.com/wonky-putt/')
   assert.match(shareText('2026-11-25', 'X', { s: 1, p: 3, k: 1 }, resultName(1, 3)), / 1 stroke \(par 3\) · Hole in one\n/)
   assert.match(shareText('2026-11-25', 'X', { s: 8, p: 3, k: 0 }, resultName(8, 3, false)), /Picked up/)
 })
@@ -126,4 +156,23 @@ test('save data: old saves gain a daily block, junk is repaired, the official tr
   // a finished day's stale cursor is dropped on load
   const stale = makeSave(fake({ ...defaults(), daily: { history: { '2026-11-25': { s: 3, p: 3, k: 1 } }, cur: { date: '2026-11-25', strokes: 1, x: 1, y: 1 } } }), HOLES)
   assert.equal(stale.data.daily.cur, null)
+})
+
+test('1.4.0 countdown to the next daily hole', async () => {
+  const { msToMidnight, fmtCountdown } = await import('../src/daily.js')
+  assert.equal(msToMidnight(new Date(2026, 10, 26, 23, 0, 0)), 3600000)
+  assert.equal(msToMidnight(new Date(2026, 10, 26, 0, 0, 0)), 86400000)
+  assert.ok(msToMidnight() > 0 && msToMidnight() <= 25 * 3600000)
+  assert.equal(fmtCountdown(3600000), '1h 00m'); assert.equal(fmtCountdown(5 * 3600000 + 7 * 60000), '5h 07m')
+  assert.equal(fmtCountdown(42 * 60000), '42m'); assert.equal(fmtCountdown(1000), '1m'); assert.equal(fmtCountdown(0), ''); assert.equal(fmtCountdown(-5), '')
+})
+
+test('1.4.0 save repair: an off-field daily spot falls back to the tee, and bestRound 0 means no best', () => {
+  const fake = (data) => ({ data: { ...data }, save() {} })
+  const s = makeSave(fake({ v: 2, daily: { cur: { date: '2026-11-26', strokes: 2, x: 9999, y: -50 } }, bestRound: 0 }), HOLES)
+  assert.deepEqual(s.data.daily.cur, { date: '2026-11-26', strokes: 2, x: null, y: null }, 'strokes kept, spot dropped')
+  assert.equal(s.data.bestRound, null)
+  const ok = makeSave(fake({ ...defaults(), bestRound: 61, daily: { cur: { date: '2026-11-26', strokes: 1, x: 300.5, y: 200 } } }), HOLES)
+  assert.equal(ok.data.bestRound, 61); assert.equal(ok.data.daily.cur.x, 300.5)
+  assert.deepEqual(makeSave(fake(JSON.parse(JSON.stringify(s.data))), HOLES).data.daily.cur, s.data.daily.cur, 'stable on reload')
 })

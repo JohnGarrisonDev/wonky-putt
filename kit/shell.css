@@ -33,6 +33,8 @@
 }
 
 * { box-sizing: border-box; }
+/* `hidden` must win over display rules like .card's grid (an empty Tell us card showed when the API was down). */
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--font-body); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overflow-x: clip; }
 ::selection { background: var(--orange); color: var(--night); }

@@ -183,3 +183,16 @@ table.card caption { padding-left: 4px; }
 @media (max-height: 480px) and (min-width: 621px) { .scr-final .cards { grid-template-columns: 1fr 1fr; } .scr-final .panel .sub { display: none; } .scr-final .panel h2 { font-size: 30px; } }
 /* phones: the final scorecard and its buttons fit a 360 x 640 screen */
 @media (max-width: 620px) { .scr-final .panel { gap: 6px; padding-block: 12px 14px; } .scr-final .panel h2 { font-size: 30px; } .scr-final .panel .sub { font-size: 14px; } .scr-final .panel .note { font-size: 12.5px; line-height: 1.3; } .scr-final .btns { margin-top: 2px; gap: 8px; } }
+/* ---- 1.4.0: the title card stands aside so the windmill behind it shows (beside it on wide stages, below it on tall
+   ones, where the field is turned and the windmill sits above the middle), and the daily countdown */
+.overlay.scr-title { justify-items: start; padding-left: max(4%, 10px); }
+.stage.is-portrait .overlay.scr-title { justify-items: center; align-items: end; padding-left: 10px; }
+.stage.is-portrait .scr-title .panel { gap: 5px; padding-block: 10px 12px; }
+.stage.is-portrait .scr-title .stats { display: none; }
+.stage.is-portrait .scr-title .btns { gap: 7px; margin-top: 2px; }
+.stage.is-portrait .scr-title .btn { padding-block: 8px; min-height: 44px; }
+.stage.is-portrait .scr-title .eyebrow, .stage.is-portrait .scr-title .sub, .stage.is-portrait .scr-title .how { display: none; }
+.stage.is-portrait .scr-title .logo-title { font-size: 34px; line-height: 1; margin: 0; }
+.panel .countdown { font-weight: 700; color: var(--p-ink2); white-space: nowrap; }
+/* 1.4.0 fix: on short landscape screens (844 x 390 full screen) the title card fits without scrolling */
+@media (max-height: 480px) { .scr-title .panel .eyebrow, .scr-title .panel .sub { display: none; } .scr-title .panel { gap: 6px; } .scr-title .panel .btn { padding-block: 8px; min-height: 44px; } }

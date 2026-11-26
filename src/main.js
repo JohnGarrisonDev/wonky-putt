@@ -2,7 +2,7 @@
 import { C, makeStore, wireChrome, haptic } from '../kit/kit.js'
 import { dailyTalk, tellUs } from '../kit/talk.js'
 import { HOLES } from './holes.js'
-import { DT, compileHole, createWorld, shoot, step, previewPath } from './physics.js'
+import { DT, compileHole, createWorld, shoot, step, previewPath, pointInPoly, distToSeg, shapePoints, inZone } from './physics.js'
 import { createRenderer } from './render.js'
 import { createInput } from './input.js'
 import { createUI } from './ui.js'
@@ -46,12 +46,14 @@ function canAim() { return G.mode === 'play' && !ui.screen && G.world.state === 
 
 // ---------- holes
 function setupHole(hole, kind, resume) {
-  G.mode = 'play'; G.kind = kind; G.hole = hole
+  G.mode = 'play'; G.kind = kind; G.hole = hole; R.view.alignTop = false
   G.comp = compileHole(hole); G.world = createWorld(G.comp); G.world.events = []
   G.sink = 0; G.respawn = 0; G.ending = 0
-  if (resume && Number.isFinite(resume.x) && Number.isFinite(resume.y) && Number.isFinite(resume.strokes)) {
+  if (resume && Number.isFinite(resume.strokes)) {
     const w = G.world
-    w.ball.x = w.last.x = resume.x; w.ball.y = w.last.y = resume.y; w.strokes = resume.strokes
+    // a saved spot off the green or inside a wall (old or hand-edited data) would strand the ball: use the tee instead
+    if (restSpotOk(G.comp, resume.x, resume.y)) { w.ball.x = w.last.x = resume.x; w.ball.y = w.last.y = resume.y }
+    w.strokes = resume.strokes
     for (const id of resume.open || []) w.open[id] = true
   }
   ui.hide(); paintHud(); fit()
@@ -59,14 +61,23 @@ function setupHole(hole, kind, resume) {
   const resumed = resume && resume.strokes > 0
   ui.toast(kind === 'daily' && resumed ? `Welcome back. Stroke ${resume.strokes + 1} of your official try.` : kind === 'daily' ? `Official try. ${hole.hint}` : hole.hint || '', 5200)
 }
+/** Can a ball rest here? On the green and clear of every wall edge. */
+function restSpotOk(c, x, y) {
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !pointInPoly(c.green, x, y)) return false
+  for (const s of c.segs) if (!s.gate && distToSeg(x, y, s.ax, s.ay, s.bx, s.by) < 10 + (s.r || 0)) return false
+  for (const wl of c.hole.walls || []) { const pts = shapePoints(wl); if (pts && pointInPoly(pts, x, y)) return false }
+  for (const z of c.zones) if (z.type === 'water' && inZone(z, x, y)) return false
+  return true
+}
 function loadHole(i, kind, resume) { G.i = i; G.date = null; setupHole(HOLES[i], kind, resume) }
 function loadDaily(key, kind, resume) { G.date = key; setupHole(dailyFor(key), kind, resume) }
 function showAttract() {
   G.mode = 'title'
   G.comp = compileHole(HOLES[ATTRACT_HOLE]); G.world = createWorld(G.comp); G.world.events = []
   G.sink = 0; G.respawn = 0; G.ending = 0
-  R.setHole(G.comp); input.cancel()
   ui.hud({ show: false }); ui.toast('')
+  R.view.top = 8; R.view.alignTop = true; R.resize() // no HUD on the title: on tall stages the windmill sits higher, above the card
+  R.setHole(G.comp); input.cancel()
 }
 function roundDiff() {
   const r = round()
@@ -101,7 +112,7 @@ function dailyTitleInfo() {
     const past = dl.cur.date !== key
     return { label: past ? 'Finish yesterday’s daily' : 'Continue daily', status: `${past ? shortDate(dl.cur.date) + ' · ' : ''}official try in progress · ${dl.cur.strokes} ${dl.cur.strokes === 1 ? 'stroke' : 'strokes'}`, todo: true }
   }
-  if (rec) return { label: 'Daily hole <small>done</small>', status: `Today: ${rec.k ? `${resultName(rec.s, rec.p).replace(/!$/, '')} in ${rec.s}` : 'not holed'}${streak} · new hole at midnight`, todo: false }
+  if (rec) return { label: 'Daily hole <small>done</small>', status: `Today: ${rec.k ? `${resultName(rec.s, rec.p).replace(/!$/, '')} in ${rec.s}` : 'not holed'}${streak} · <span data-countdown></span>`, todo: false }
   const hole = dailyFor(key)
   return { label: 'Daily hole', status: `${shortDate(key)}: “${hole.name}” · par ${hole.par}${streak}`, todo: true }
 }
@@ -381,6 +392,7 @@ function fit() {
   const hud = stage.querySelector('.hud'), c = canvas.getBoundingClientRect()
   if (hud && !hud.hidden) R.view.top = Math.max(8, Math.round(hud.getBoundingClientRect().bottom - c.top))
   R.resize()
+  stage.classList.toggle('is-portrait', !!R.view.portrait) // the title card moves aside so the windmill shows (game.css)
 }
 new ResizeObserver(fit).observe(stage)
 fit()

@@ -58,6 +58,10 @@ const DEFAULTS = { v: 2, best: {}, unlocked: 0, aces: 0, aceHoles: {}, round: nu
 const isKey = (k) => typeof k === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(k)
 const posInt = (n) => Number.isInteger(n) && n > 0
 
+// A saved ball spot must be on the 960 x 600 field; anything else (junk, hand-edited) means "back to the tee" (main.js
+// also checks the spot against the hole itself before using it).
+const onField = (x, y) => (Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 960 && y >= 0 && y <= 600 ? { x, y } : { x: null, y: null })
+
 /** Repair the daily block in place: history entries { s: strokes, p: par, k: 1 holed / 0 not },
  *  cur = the official attempt in progress { date, strokes, x, y }, practice = { date, best }. */
 export function repairDaily(d) {
@@ -69,7 +73,7 @@ export function repairDaily(d) {
     if (isKey(k) && r && posInt(r.s) && posInt(r.p) && r.s <= 20 && r.p <= 5) dl.history[k] = { s: r.s, p: r.p, k: r.k === 1 ? 1 : 0 }
   }
   const c = dl.cur
-  dl.cur = c && isKey(c.date) && Number.isInteger(c.strokes) && c.strokes >= 0 && c.strokes <= 20 && Number.isFinite(c.x) && Number.isFinite(c.y) && !dl.history[c.date] ? { date: c.date, strokes: c.strokes, x: c.x, y: c.y } : null
+  dl.cur = c && isKey(c.date) && Number.isInteger(c.strokes) && c.strokes >= 0 && c.strokes <= 20 && !dl.history[c.date] ? { date: c.date, strokes: c.strokes, ...onField(c.x, c.y) } : null
   dl.bestStreak = Number.isInteger(dl.bestStreak) && dl.bestStreak > 0 ? dl.bestStreak : 0
   const pr = dl.practice
   dl.practice = pr && isKey(pr.date) && posInt(pr.best) ? { date: pr.date, best: pr.best } : null
@@ -89,6 +93,7 @@ export function makeSave(store, holes) {
   if (d.round && !(Array.isArray(d.round.scores) && Number.isFinite(d.round.i) && d.round.i >= 0 && d.round.i < holes.length && d.round.scores.length === d.round.i)) d.round = null
   if (!SKINS.some((s) => s.id === d.skin)) d.skin = 'orange'
   repairDaily(d)
+  if (!(Number.isInteger(d.bestRound) && d.bestRound >= holes.length)) d.bestRound = null // 0 or junk = no best round yet
   d.v = 2
   const api = {
     data: d,

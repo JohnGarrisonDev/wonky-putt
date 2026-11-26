@@ -26,7 +26,7 @@ export function createRenderer(canvas) {
     view.portrait = f.h > f.w * 1.05
     const lw = view.portrait ? H : W, lh = view.portrait ? W : H, ah = f.h - view.top - 4
     view.s = Math.min(f.w / lw, ah / lh)
-    view.ox = (f.w - lw * view.s) / 2; view.oy = view.top + 2 + (ah - lh * view.s) / 2
+    view.ox = (f.w - lw * view.s) / 2; view.oy = view.top + 2 + (view.alignTop && view.portrait ? 0 : (ah - lh * view.s) / 2) // alignTop: the title lifts the field clear of its card
     sv = toLogicalDir(5, 7)
     for (const cv of [ground, top]) { cv.width = canvas.width; cv.height = canvas.height }
     dirty = true

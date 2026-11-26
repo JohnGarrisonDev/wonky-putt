@@ -81,10 +81,13 @@ export const HOLES = [
   },
   {
     name: 'The Boing Department', par: 3,
-    hint: 'Bumpers kick back. Go around, or use them.',
+    hint: 'Bumpers kick back. Kick them wrong and you land in the sand.',
     tee: [150, 300], cup: [770, 300],
     green: [[80, 200], [300, 120], [700, 110], [890, 220], [880, 400], [690, 490], [310, 480], [90, 390]],
     bumpers: [[400, 300, 30], [590, 300, 24], [700, 204, 26], [700, 396, 26]],
+    // 1.4.0: sand along both long sides soaks up wild bumper bounces, so aces need the right angle, not luck
+    // (random first putts that ace: 2.2% -> 0.5%; aim slices that can ace: 24 -> 5 of 36)
+    zones: [{ type: 'sand', poly: [[290, 110], [690, 100], [690, 184], [290, 178]] }, { type: 'sand', poly: [[290, 422], [690, 416], [690, 500], [290, 500]] }],
     decor: [{ bot: [130, 120], color: 'blue' }, { bot: [840, 500], color: 'mint' }],
   },
   {

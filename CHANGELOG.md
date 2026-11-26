@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 (2026-11-26)
+- **Next hole in...**: the daily card and the title screen now count down to the next daily hole.
+- **The Boing Department** (hole 8) has sand along both long sides. A wild bumper bounce now dies in the sand instead of rattling around until it falls in, so a hole in one there takes the right angle, not luck. Your stars and best score for the hole are kept.
+- The title card steps aside so you can see the windmill spinning behind it.
+- Daily holes from 29 November on never put a bunker against a wall or a room divider. Holes already out, today's and tomorrow's included, are exactly as they were.
+- If you leave the title screen open past midnight, it switches to the new day's hole by itself.
+- The title card fits small phones (upright) and short landscape screens without covering the windmill or scrolling.
+- Copy result now ends with the full link, https://games.oddvale.com/wonky-putt/.
+- A damaged save can no longer leave your daily ball stranded off the course (it goes back to the tee, strokes kept), and a best round of 0 is treated as no best round yet.
+
 ## 1.3.0 (2026-11-26)
 Plays better on phones.
 - Full screen on every phone, iPhone included: tap "Play full screen" under the game. Upright or sideways, the course re-fits to the screen.
