@@ -120,6 +120,13 @@ One hole per local date, the same for everyone. How a date becomes a hole:
 
 Game flow: the title shows today's status (not played, in progress, or result and streak). The first press shows a short intro card; "Tee off" starts the official try (no restarts: R and the menu refuse). When it ends, the daily card shows the result, streak, best streak, the last seven days and Copy result; "Practise it" starts unlimited practice runs (`kind: 'dailyPractice'`) that only track a practice best. An official try left unfinished on a past date is offered first ("Finish yesterday's daily") and counts for its own date. A day counts toward the streak only when the ball was holed in the official try. Daily holes do not touch course stars, bests or the ace counter.
 
+## Phones and full screen
+- `wireChrome({ stage })` (kit) gives native full screen or the iPhone focus mode; both set `.stage.is-full`. `src/game.css` pads the HUD with `env(safe-area-inset-*)` there and keeps it clear of the kit's exit button.
+- The HUD is 52 px on touch screens and taller with a notch, so `fit()` in main.js measures it against the canvas rect into `R.view.top` before `R.resize()` (it used to be the fixed `HUD_H`). It runs on stage resize and when a hole opens.
+- Input: the dead zone is 8 px for a mouse, 20 px for touch. Coming back inside it after a live pull sets `aim.back` (main shows "Let go here to cancel."). A second pointer cancels (`onCancel`); `pointercancel` and `lostpointercapture` cancel without putting.
+- `table.card` (scorecard) shares the kit's `.card` class name, so game.css resets its grid, padding and shadow.
+- `haptic()` on a putt, a splash and a sunk ball.
+
 ## Testing in a browser
 - `?debug` exposes `window.__game`: `goto(i)`, `shoot(deg, power)`, `state()`, `advance(seconds)` (runs the loop without waiting for frames; background tabs throttle `requestAnimationFrame`), `unlockAll()`, `action(name, arg)`, `daily(date, kind)` (`kind` 'daily' goes through the real flow; 'dailyPractice' just loads that date's hole), `dailyHole(date)`, `setToday(date)`, `lastShare()`. `?debug&date=YYYY-MM-DD` pretends today is that date.
 - `auto.playHole(__game)` from `tools/autoplay.js` also plays the daily hole.

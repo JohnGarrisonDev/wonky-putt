@@ -49,7 +49,7 @@ button { font: inherit; color: inherit; }
 .eyebrow { display: inline-flex; align-items: center; gap: 9px; font: 500 12.5px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 
 /* ---- top bar */
-.topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 2px solid var(--edge); }
+.topbar { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-inset-top, 0px); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 2px solid var(--edge); }
 .topbar .wrap { display: flex; align-items: center; gap: 12px; min-height: 60px; }
 .logo { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; min-width: 0; }
 .logo svg { flex: none; transition: transform .25s cubic-bezier(.3, 1.6, .5, 1); }
@@ -82,6 +82,33 @@ button { font: inherit; color: inherit; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .stage:fullscreen { border: 0; border-radius: 0; max-width: none; width: 100vw; height: 100vh; aspect-ratio: auto; }
 @media (max-width: 620px) { .stage { border-radius: 14px; box-shadow: 4px 4px 0 var(--edge); } }
+
+/* ---- full screen (kit.js wireChrome). Native: .stage:fullscreen. iPhone fallback: html.stage-focus pins the stage over the page.
+   Both add .stage.is-full. The canvas keeps clear of notches and the home bar; the stage colour fills the edges. */
+html.stage-focus, html.stage-focus body { overflow: hidden; overscroll-behavior: none; }
+html.stage-focus .stage { position: fixed; inset: 0; z-index: 1000; width: 100vw; height: 100vh; height: 100dvh; max-width: none; margin: 0; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; }
+/* (A canvas is a replaced element: it needs explicit width/height, or it falls back to its pixel size and grows each re-fit.) */
+.stage.is-full > canvas { top: env(safe-area-inset-top, 0px); left: env(safe-area-inset-left, 0px); right: auto; bottom: auto;
+  width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); height: calc(100% - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+.stage-exit { display: none; position: absolute; z-index: 60; top: max(10px, env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0; border-radius: 999px; border: 2px solid rgba(251, 246, 236, .7); background: rgba(23, 19, 31, .6); color: #fbf6ec; cursor: pointer; backdrop-filter: blur(6px); }
+.stage-exit svg { width: 20px; height: 20px; }
+.stage.is-full .stage-exit { display: inline-flex; }
+/* Add class "stage-inset" to an absolutely positioned overlay (inset: 0) inside the stage to keep it clear of notches like the canvas. */
+.stage.is-full .stage-inset { top: env(safe-area-inset-top, 0px); right: env(safe-area-inset-right, 0px); bottom: env(safe-area-inset-bottom, 0px); left: env(safe-area-inset-left, 0px); }
+.stage-cta { display: none; }
+.stage-cta svg { width: 20px; height: 20px; flex: none; }
+@media (pointer: coarse) { .stage-cta { display: flex; margin: 14px auto 0; } }
+
+/* ---- touch: no grey tap flash or double-tap zoom on controls, 44px targets on touch screens */
+button, a, .chip, .btn, [role="button"] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+@media (pointer: coarse) { .chip { min-height: 44px; } .chip.icon { min-width: 44px; justify-content: center; } .btn.small { min-height: 44px; } }
+
+/* ---- phones: a compact title so the game sits higher on the screen */
+@media (max-width: 620px) {
+  .game-head { padding-block: 12px 10px; }
+  .game-head h1 { font-size: 34px; }
+  .game-head p { font-size: 15px; line-height: 1.45; margin-top: 4px; }
+}
 
 .info { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding-block: clamp(28px, 4vw, 48px); }
 .card { background: var(--surface); border: 2px solid var(--edge); border-radius: var(--radius); padding: 22px 22px 24px; display: grid; gap: 10px; align-content: start; min-width: 0; box-shadow: var(--hard); }

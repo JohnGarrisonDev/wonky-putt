@@ -9,6 +9,13 @@
   <link rel="canonical" href="https://games.oddvale.com/wonky-putt/" />
   <meta name="theme-color" content="#17131f" />
   <link rel="icon" href="kit/favicon.svg" type="image/svg+xml" />
+  <!-- "Add to Home Screen" opens the whole arcade like an app (no browser bars), from any game page. -->
+  <link rel="manifest" href="../site.webmanifest" />
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Oddvale Games" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Oddvale Games" />
   <meta property="og:title" content="Wonky Putt — Oddvale Games" />
@@ -61,9 +68,10 @@
           <li><b>Daily hole:</b> a new generated hole every day, the same for everyone. Your first try is the one that counts; after that, practise all you like. Sink it to keep your streak.</li>
         </ul></div>
         <div class="card yellow"><h2>Controls</h2><ul>
-          <li><b>Mouse or touch:</b> press anywhere on the course, pull back like a slingshot, let go. Longer pull, harder putt.</li>
+          <li><b>Mouse or touch:</b> press anywhere on the course, pull back like a slingshot, let go. Longer pull, harder putt. Changed your mind? Slide back to where you pressed and let go, or touch with a second finger.</li>
           <li><b>Keyboard:</b> <kbd>←</kbd> <kbd>→</kbd> aim, <kbd>↑</kbd> <kbd>↓</kbd> power, <kbd>Space</kbd> or <kbd>Enter</kbd> to putt. Hold <kbd>Shift</kbd> for fine aim.</li>
-          <li><kbd>R</kbd> restarts the hole (a mulligan in a full round; not allowed on the daily's official try). <kbd>Esc</kbd> opens the menu or cancels an aim.</li>
+          <li>The menu button (or <kbd>Esc</kbd>) pauses and lets you restart the hole; <kbd>R</kbd> restarts at once (a mulligan in a full round; not allowed on the daily's official try).</li>
+          <li><b>Phone:</b> tap <b>Play full screen</b> under the game. It works upright or sideways.</li>
           <li>The dotted line shows where the ball goes up to its first bounce.</li>
         </ul></div>
         <div class="card tilt-r"><h2>Made by AI, in the open</h2><p>This game was designed and coded by AI models, and AI models keep updating it. The whole thing is on <a href="https://github.com/JohnGarrisonDev/wonky-putt">GitHub</a>: read the code, see what changed, or suggest what comes next.</p></div>
@@ -74,7 +82,7 @@
 
   <footer class="footer">
     <div class="wrap">
-      <span>Wonky Putt v1.2.0 · An <a href="https://oddvale.com">Oddvale</a> game. Your progress is saved in this browser only.</span>
+      <span>Wonky Putt v1.3.0 · An <a href="https://oddvale.com">Oddvale</a> game. Your progress is saved in this browser only.</span>
       <span><a href="../">More games</a> · <a href="https://github.com/JohnGarrisonDev/wonky-putt/issues/new?template=feedback.yml" target="_blank" rel="noopener">Feedback</a> · <a href="../privacy/">Privacy</a> · <a href="https://github.com/JohnGarrisonDev/wonky-putt">Source</a></span>
     </div>
   </footer>

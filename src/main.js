@@ -1,5 +1,5 @@
 // Wonky Putt entry point: wires physics, renderer, input, UI, audio and save data together and owns the game flow.
-import { C, makeStore, wireChrome } from '../kit/kit.js'
+import { C, makeStore, wireChrome, haptic } from '../kit/kit.js'
 import { dailyTalk, tellUs } from '../kit/talk.js'
 import { HOLES } from './holes.js'
 import { DT, compileHole, createWorld, shoot, step, previewPath } from './physics.js'
@@ -29,11 +29,16 @@ let dailyCache = null
 const dailyFor = (key) => (dailyCache && dailyCache.date === key ? dailyCache : (dailyCache = dailyHole(key)))
 
 const ui = createUI(stage, onAction)
+let cancelHint = false
 const input = createInput(canvas, {
   canAim,
   toLogicalDir: (dx, dy) => R.toLogicalDir(dx, dy),
   defaultAngle: () => Math.atan2(G.comp.cup[1] - G.world.ball.y, G.comp.cup[0] - G.world.ball.x),
-  onChange(aim) { aim.path = aim.active ? previewPath(G.world, aim.angle, aim.power) : null },
+  onChange(aim) {
+    aim.path = aim.active ? previewPath(G.world, aim.angle, aim.power) : null
+    if (aim.back !== cancelHint) { cancelHint = aim.back; ui.toast(aim.back ? 'Let go here to cancel.' : '', 0) }
+  },
+  onCancel() { ui.toast('Putt cancelled.', 1400) },
   onShoot: putt,
 })
 
@@ -49,8 +54,8 @@ function setupHole(hole, kind, resume) {
     w.ball.x = w.last.x = resume.x; w.ball.y = w.last.y = resume.y; w.strokes = resume.strokes
     for (const id of resume.open || []) w.open[id] = true
   }
+  ui.hide(); paintHud(); fit()
   R.setHole(G.comp); input.cancel(); input.clearKeys()
-  ui.hide(); paintHud()
   const resumed = resume && resume.strokes > 0
   ui.toast(kind === 'daily' && resumed ? `Welcome back. Stroke ${resume.strokes + 1} of your official try.` : kind === 'daily' ? `Official try. ${hole.hint}` : hole.hint || '', 5200)
 }
@@ -141,7 +146,7 @@ function recordOfficial(sunk) {
 }
 function putt(angle, power) {
   if (!canAim() || !shoot(G.world, angle, power)) return
-  audio.putt(power)
+  audio.putt(power); haptic(10)
   const b = G.world.ball
   fx.dust(b.x, b.y, 4 + Math.round(power * 6), C.paper, 60 + power * 120, 4)
   fx.squash(Math.cos(angle), Math.sin(angle), 0.4 + power * 0.5)
@@ -269,7 +274,7 @@ function handleEvents() {
       case 'mover': audio.mover(e.v); fx.dust(e.x, e.y, 5, C.paper, 90, 4); break
       case 'bumper': audio.bumper(); fx.bumper(e.i); fx.ring(e.x, e.y, C.yellow, 54, 0.35); fx.dust(b.x, b.y, 6, C.pink, 140, 4); fx.shake(0.3); break
       case 'splash':
-        audio.splash(); fx.ring(e.x, e.y, C.paper, 46, 0.6); fx.ring(e.x, e.y, '#8F8FFF', 28, 0.45); fx.dust(e.x, e.y, 14, C.paper, 170, 5)
+        audio.splash(); haptic(40); fx.ring(e.x, e.y, C.paper, 46, 0.6); fx.ring(e.x, e.y, '#8F8FFF', 28, 0.45); fx.dust(e.x, e.y, 14, C.paper, 170, 5)
         fx.text(e.x, e.y, '+1', C.yellow, 30);
         G.respawn = 0.75
         break
@@ -291,7 +296,7 @@ function onSunk() {
   const w = G.world, hole = G.hole, cup = G.comp.cup
   if (G.mode !== 'play') { w.state = 'rest'; return }
   if (G.kind === 'daily') recordOfficial(true)
-  audio.sink(); fx.flag(); fx.ring(cup[0], cup[1], C.paper, 50, 0.5)
+  audio.sink(); haptic([15, 60, 15]); fx.flag(); fx.ring(cup[0], cup[1], C.paper, 50, 0.5)
   G.sink = 0.0001
   ui.toast('')
   if (w.strokes === 1) { setTimeout(() => audio.ace(), 260); fx.confetti(cup[0], cup[1], 130); fx.text(cup[0], cup[1], 'Hole in one!', C.yellow, 40); fx.shake(0.5) }
@@ -371,8 +376,14 @@ window.addEventListener('blur', () => input.clearKeys())
 // ---------- boot
 wireChrome({ stage })
 tellUs(document.getElementById('tell-us'), { game: 'wonky-putt', issueUrl: 'https://github.com/JohnGarrisonDev/wonky-putt/issues/new?template=feedback.yml' })
-new ResizeObserver(() => R.resize()).observe(stage)
-R.resize()
+/** Re-fit the canvas under the real HUD height (taller on touch screens, plus the notch in full screen). */
+function fit() {
+  const hud = stage.querySelector('.hud'), c = canvas.getBoundingClientRect()
+  if (hud && !hud.hidden) R.view.top = Math.max(8, Math.round(hud.getBoundingClientRect().bottom - c.top))
+  R.resize()
+}
+new ResizeObserver(fit).observe(stage)
+fit()
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => R.invalidate())
 if (DEBUG) { const d = new URLSearchParams(location.search).get('date'); if (isDateKey(d)) G.today = d }
 titleScreen()

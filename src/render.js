@@ -7,13 +7,13 @@ import { W, H, BALL_R, CUP_R, PORTAL_R, BUTTON_R, shapePoints, updateMovers } fr
 const FELT = '#2FD6A3', FELT_2 = '#27C896', SHADOW = 'rgba(23,19,31,0.32)', SAND = '#F8DE9C', SAND_2 = '#DDB862', ICE = '#DFF5FF', ICE_2 = '#B5E2F6', WATER_2 = '#8F8FFF'
 const BOT_COLORS = { yellow: C.yellow, pink: C.pink, blue: C.blue, mint: '#8FF0D0', orange: C.orange }
 const PORTAL_COLORS = [C.pink, C.yellow, '#8FF0D0']
-export const HUD_H = 46
+export const HUD_H = 46 // default; main.js sets view.top from the real HUD (taller on touch screens and in full screen)
 const reducedMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d')
   const ground = document.createElement('canvas'), top = document.createElement('canvas')
-  const view = { w: 1, h: 1, dpr: 1, s: 1, ox: 0, oy: 0, portrait: false }
+  const view = { w: 1, h: 1, dpr: 1, s: 1, ox: 0, oy: 0, portrait: false, top: HUD_H }
   let comp = null, dirty = true, shake = 0
   const parts = [], trail = []
   const bumperPulse = []
@@ -24,9 +24,9 @@ export function createRenderer(canvas) {
     const f = fitCanvas(canvas)
     view.w = f.w; view.h = f.h; view.dpr = f.dpr
     view.portrait = f.h > f.w * 1.05
-    const lw = view.portrait ? H : W, lh = view.portrait ? W : H, ah = f.h - HUD_H - 4
+    const lw = view.portrait ? H : W, lh = view.portrait ? W : H, ah = f.h - view.top - 4
     view.s = Math.min(f.w / lw, ah / lh)
-    view.ox = (f.w - lw * view.s) / 2; view.oy = HUD_H + 2 + (ah - lh * view.s) / 2
+    view.ox = (f.w - lw * view.s) / 2; view.oy = view.top + 2 + (ah - lh * view.s) / 2
     sv = toLogicalDir(5, 7)
     for (const cv of [ground, top]) { cv.width = canvas.width; cv.height = canvas.height }
     dirty = true
@@ -63,7 +63,7 @@ export function createRenderer(canvas) {
     seedCounter = 91 + comp.green.length * 977 + Math.round(comp.cup[0] * 13 + comp.cup[1] * 7 + comp.tee[1])
     g.lineCap = 'round'; g.lineJoin = 'round'
     for (let i = 0; i < 22; i++) {
-      const x = rnd() * view.w * k, y = (HUD_H + rnd() * (view.h - HUD_H)) * k, sz = (9 + rnd() * 13) * k, rot = rnd() * 6.3
+      const x = rnd() * view.w * k, y = (view.top + rnd() * (view.h - view.top)) * k, sz = (9 + rnd() * 13) * k, rot = rnd() * 6.3
       g.save(); g.translate(x, y); g.rotate(rot)
       g.strokeStyle = g.fillStyle = i % 5 === 4 ? C.line : C.plum2; g.lineWidth = 4 * k
       g.beginPath()

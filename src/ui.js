@@ -85,7 +85,8 @@ export function createUI(stage, onAction) {
           ${btn('newround', round ? 'New round' : 'Play round', round || daily.todo ? '' : 'primary')}
           <div class="btns">${btn('select', 'Hole select', 'small')}${btn('skins', 'Balls', 'small')}</div>
         </div>
-        <p class="how">Press anywhere, pull back, let go. Or aim with <kbd>←</kbd><kbd>→</kbd> and putt with <kbd>Space</kbd>.</p>
+        <p class="how keys">Press anywhere, pull back, let go. Or aim with <kbd>←</kbd><kbd>→</kbd> and putt with <kbd>Space</kbd>.</p>
+        <p class="how touch">Press anywhere, pull back, let go. To cancel, slide back to where you pressed.</p>
         ${anyProgress ? `<p class="stats">${STAR(true)} ${stars}/${maxStars} <i>·</i> Aces ${aces} <i>·</i> Best round ${bestRound ?? '—'}</p>` : ''}`, { clear: true })
     },
     menu({ kind, no, name, par, hint }) {

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0 (2026-11-26)
+Plays better on phones.
+- Full screen on every phone, iPhone included: tap "Play full screen" under the game. Upright or sideways, the course re-fits to the screen.
+- Cancel a putt: slide back to where you pressed (a bigger spot on touch screens) and let go, or touch with a second finger.
+- The daily card, its "how was it?" vote and the final scorecard fit on small phones, with bigger vote buttons.
+- The scorecard lays out properly again, and sits side by side on short landscape screens.
+- A bigger menu button, the top bar clear of notches in full screen, and a small buzz on a putt, a splash and a sunk ball (Android).
+
 ## 1.2.0 (2026-11-25)
 Tell us what you think.
 - After today's official try, tell us how hard the daily hole was with one tap, and see how your strokes compare with everyone else's today. Anonymous: nothing about you is stored.

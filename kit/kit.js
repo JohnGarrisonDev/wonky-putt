@@ -91,23 +91,95 @@ export const sfx = (() => {
   }
 })()
 
-/** Wire up the standard top-bar buttons: [data-mute] and [data-fullscreen] (target: the .stage element). */
-export function wireChrome({ stage } = {}) {
+/** A short vibration on phones that support it (Android). Silent when sound is muted or motion is reduced. */
+export function haptic(pattern = 12) {
+  if (sfx.muted) return
+  try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return; navigator.vibrate?.(pattern) } catch { /* unsupported */ }
+}
+
+/**
+ * Wire up the standard top-bar buttons: [data-mute] and [data-fullscreen] (target: the .stage element).
+ * Full screen uses the browser's Fullscreen API where it exists, and otherwise (iPhone) a "focus" mode that pins the
+ * stage over the whole page. Either way the stage gets the class `is-full`, an exit button appears inside it, and
+ * the stage fires `oddvale:fullscreen` ({ detail: { on } }). The stage's ResizeObserver re-fits the canvas.
+ * orientation: optional 'portrait' | 'landscape' to lock to while in native full screen (Android only).
+ * Returns { fullscreen: { enter, exit, toggle, get on } }.
+ */
+export function wireChrome({ stage, orientation } = {}) {
   const muteBtn = document.querySelector('[data-mute]')
   if (muteBtn) {
     const paint = () => { muteBtn.setAttribute('aria-pressed', String(sfx.muted)); muteBtn.title = sfx.muted ? 'Sound off' : 'Sound on'; muteBtn.innerHTML = sfx.muted ? ICON.soundOff : ICON.soundOn }
     muteBtn.addEventListener('click', () => { sfx.setMuted(!sfx.muted); paint() }); paint()
   }
-  const fsBtn = document.querySelector('[data-fullscreen]')
-  if (fsBtn && stage) {
-    if (!stage.requestFullscreen) fsBtn.hidden = true
-    fsBtn.addEventListener('click', () => { document.fullscreenElement ? document.exitFullscreen() : stage.requestFullscreen().catch(() => {}) })
-  }
+  const fullscreen = stage ? makeFullscreen(stage, { orientation, button: document.querySelector('[data-fullscreen]') }) : null
+  return { fullscreen }
 }
+
+function makeFullscreen(stage, { orientation, button }) {
+  const root = document.documentElement
+  let focus = false
+  const on = () => focus || document.fullscreenElement === stage
+  const exitBtn = document.createElement('button')
+  exitBtn.type = 'button'; exitBtn.className = 'stage-exit'; exitBtn.setAttribute('aria-label', 'Exit full screen'); exitBtn.title = 'Exit full screen'
+  exitBtn.innerHTML = ICON.exitFull
+  exitBtn.addEventListener('click', (e) => { e.stopPropagation(); exit() })
+  exitBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+  stage.appendChild(exitBtn)
+  // On touch screens, a clear "Play full screen" button under the stage (the top-bar icon is easy to miss).
+  const cta = document.createElement('button')
+  cta.type = 'button'; cta.className = 'btn small stage-cta'; cta.innerHTML = `${ICON.full}<span>Play full screen</span>`
+  cta.addEventListener('click', () => enter())
+  stage.insertAdjacentElement('afterend', cta)
+
+  const sync = () => {
+    const full = on()
+    stage.classList.toggle('is-full', full)
+    if (button) { button.setAttribute('aria-pressed', String(full)); button.title = full ? 'Exit full screen' : 'Full screen'; button.innerHTML = full ? ICON.exitFull : ICON.full }
+    stage.dispatchEvent(new CustomEvent('oddvale:fullscreen', { detail: { on: full } }))
+  }
+  const enterFocus = () => {
+    if (focus) return
+    focus = true; root.classList.add('stage-focus')
+    try { history.pushState({ oddvaleFocus: true }, '') } catch { /* ignore */ }
+    sync()
+  }
+  const exitFocus = (fromHistory) => {
+    if (!focus) return
+    focus = false; root.classList.remove('stage-focus')
+    if (!fromHistory && history.state?.oddvaleFocus) history.back()
+    sync()
+  }
+  function enter() {
+    if (on()) return
+    if (stage.requestFullscreen) {
+      // Some embedded browsers never settle the request: fall back to focus mode after a second.
+      const fallback = setTimeout(() => { if (!document.fullscreenElement) enterFocus() }, 1000)
+      stage.requestFullscreen({ navigationUI: 'hide' })
+        .then(() => { clearTimeout(fallback); if (orientation) screen.orientation?.lock?.(orientation).catch(() => {}) })
+        .catch(() => { clearTimeout(fallback); enterFocus() })
+    } else enterFocus()
+  }
+  function exit() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    else exitFocus(false)
+  }
+  document.addEventListener('fullscreenchange', () => {
+    // A late native success after the focus fallback: keep just the native one.
+    if (document.fullscreenElement === stage && focus) { focus = false; root.classList.remove('stage-focus'); if (history.state?.oddvaleFocus) history.back() }
+    sync()
+  })
+  window.addEventListener('popstate', () => exitFocus(true))
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && focus) exitFocus(false) })
+  if (button) { button.hidden = false; button.addEventListener('click', () => (on() ? exit() : enter())) }
+  return { enter, exit, toggle: () => (on() ? exit() : enter()), get on() { return on() } }
+}
+
 const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
 export const ICON = {
   soundOn: svg('<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>'),
   soundOff: svg('<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="m17 9 5 6M22 9l-5 6"/>'),
+  full: svg('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+  exitFull: svg('<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>'),
 }
 
 /** Draw an odd little robot face (the Oddvale mark) on a canvas: big orange eye, small dot eye, V smile. Centre x,y; size s ~ face width.
