@@ -90,9 +90,13 @@ html.stage-focus .stage { position: fixed; inset: 0; z-index: 1000; width: 100vw
 /* (A canvas is a replaced element: it needs explicit width/height, or it falls back to its pixel size and grows each re-fit.) */
 .stage.is-full > canvas { top: env(safe-area-inset-top, 0px); left: env(safe-area-inset-left, 0px); right: auto; bottom: auto;
   width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); height: calc(100% - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
-.stage-exit { display: none; position: absolute; z-index: 60; top: max(10px, env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0; border-radius: 999px; border: 2px solid rgba(251, 246, 236, .7); background: rgba(23, 19, 31, .6); color: #fbf6ec; cursor: pointer; backdrop-filter: blur(6px); }
+/* A game with a busy top-right can move the exit button: .stage { --stage-exit-top: 64px; --stage-exit-right: 10px; } (safe areas still apply). */
+.stage-exit { display: none; position: absolute; z-index: 60; top: max(var(--stage-exit-top, 10px), env(safe-area-inset-top, 0px)); right: max(var(--stage-exit-right, 10px), env(safe-area-inset-right, 0px)); width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0; border-radius: 999px; border: 2px solid rgba(251, 246, 236, .7); background: rgba(23, 19, 31, .6); color: #fbf6ec; cursor: pointer; backdrop-filter: blur(6px); }
 .stage-exit svg { width: 20px; height: 20px; }
 .stage.is-full .stage-exit { display: inline-flex; }
+/* Room the exit button needs on the right: an in-stage top bar uses padding-right: var(--stage-exit-space). 0 outside full screen. */
+.stage { --stage-exit-space: 0px; }
+.stage.is-full { --stage-exit-space: calc(64px + env(safe-area-inset-right, 0px)); }
 /* Add class "stage-inset" to an absolutely positioned overlay (inset: 0) inside the stage to keep it clear of notches like the canvas. */
 .stage.is-full .stage-inset { top: env(safe-area-inset-top, 0px); right: env(safe-area-inset-right, 0px); bottom: env(safe-area-inset-bottom, 0px); left: env(safe-area-inset-left, 0px); }
 .stage-cta { display: none; }
@@ -142,6 +146,7 @@ kbd { display: inline-block; min-width: 1.7em; text-align: center; padding: 1px 
 .talk-choice[aria-pressed="true"]::before { content: "✓"; font-weight: 800; }
 .talk-choice:disabled:not([aria-pressed="true"]) { opacity: .5; cursor: default; }
 .talk-daily.compact .talk-choice { min-height: 36px; padding: 6px 11px; font-size: 13.5px; }
+@media (pointer: coarse) { .talk-choice, .talk-daily.compact .talk-choice { min-height: 44px; } }
 .talk-tell { grid-column: 1 / -1; }
 .talk-tell .talk-sub { font-size: 14.5px; }
 .talk-tell .talk-sub a { color: inherit; font-weight: 650; }
